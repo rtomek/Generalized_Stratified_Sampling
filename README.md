@@ -55,7 +55,7 @@ view_stats = True
 If the `GeneralDataStratification.py` and `MIDRC_Sequ_Example_5000_patient.xlsx' are in the current working directory and the appropriate packages have been installed, then this script can be run with 
 ```
 python GeneralDataStratifiction.py
-'''
+```
 
 ### Output
 The output file is saved as a .tsv file at the specified output location with the name "COMPLETED"+original filename.  This file should be identical to the input file except for an added column, "dataset", which specifies whether that case has been put in the Open/Training or Sequestered/Testing set.  
