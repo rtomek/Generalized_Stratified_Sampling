@@ -1,15 +1,15 @@
 # Generalized_Stratified_Sampling
 
-This repository is meant to be a generalized version of the stratified sampling method used to split incoming datasets between the Open, publicly available MIDRC data (80%) and Sequestered, private data (20%).  This is a variant of our other repository, [Stratified_Sampling](https://github.com/MIDRC/Stratified_Sampling).  The difference between these two options is that [Stratified_Sampling](https://github.com/MIDRC/Stratified_Sampling) was written specifically for the COVID-19 use case while this generalized version can be utilized to split any dataset with equal stratification of categorical and numerical variables associated with each case.  More generally, it can be used to assign cases to training and independent testing sets.
+This repository is meant to be a generalized version of the stratified sampling method used to split incoming datasets between the Open, publicly available MIDRC data (80%) and Sequestered, private data (20%).  This is a variant of our other repository, [Stratified_Sampling](https://github.com/MIDRC/Stratified_Sampling).  The difference between these two options is that [Stratified_Sampling](https://github.com/MIDRC/Stratified_Sampling) was written specifically for the COVID-19 use case while this generalized version can be utilized to split any dataset based on specified variables, matching prevalence of all variable combinations.  More generally, it can be used to assign cases to training and independent testing sets.  Read more about the problem definition at [Stratified_Sampling](https://github.com/MIDRC/Stratified_Sampling).
 
-This code is suggested for use in cases where the user would like to split there data into 2 subsets in which multiple variables are equally stratified across the subsets.  Note, however, that this code is not intended to work for scenarios in which a there are many variable possibilities and few cases; e.g., 100 cases, 10 variables, 10 possibilities for each variable.  In this case, at least one case (and likely many) would have unique combinations of stratification variables and could be incorrectly split between the open and sequestered sets (note, the technique is designed to assign these cases to the open set).
+This code is suggested for use in cases where the user would like to split data into 2 subsets in which multiple variables are equally stratified across the subsets.  Note, however, that this code is not intended to be used for scenarios in which there are many variable possibilities and few cases; e.g., 100 cases, 10 variables, 10 possibilities for each variable.  In this scenario, at least one case (and likely many) would have unique combinations of stratification variables and could be incorrectly split between the open and sequestered sets (note, our script is written to assign these cases to the open set).
 
-Here, we present 2 examples of how to split data using this [Generalized_Stratified_Sampling](https://github.com/MIDRC/Generalized_Stratified_Sampling) repository by splitting the data file, `MIDRC_Sequ_Example_5000_patient.xlsx` using the the main data sequestration script, `GeneralDataStratification.py`  To begin, there are several parameters/variables that must be set in `GeneralDataStratification.py`, all of which are in Lines 13-39.  Below, find brief instructions for how to set each variable.
+Here, we present 2 examples of how to split data using this [Generalized_Stratified_Sampling](https://github.com/MIDRC/Generalized_Stratified_Sampling) repository with the example data file, `MIDRC_Sequ_Example_5000_patient.xlsx` and the main data sequestration script, `GeneralDataStratification.py`.  To begin, there are several parameters/variables that must be set in `GeneralDataStratification.py`, all of which are in Lines 13-37.  Below, find brief instructions for how to set each variable.
 ### Path Information
 ```
 filepath = os.getcwd()+'/' #path to file location.  This could be absolute or relative pathsor acquired with os.getcwd()+'/' 
-filename = MIDRC_Sequ_Example_5000_patient.xlsx'  #File name in either .csv or .xlsx format
-output_filepath = "os.getcwd()+'/TestRun/"  #location to save output file
+filename = 'MIDRC_Sequ_Example_5000_patient.xlsx'  #File name in either .csv or .xlsx format
+output_filepath = "os.getcwd()+'/TestRun/'  #location to save output file
 ```
 
 ### Identify stratification variables
@@ -50,6 +50,12 @@ Finally, we can identify the amount of data that we want to go to the sequestere
 percSeq = 0.2
 view_stats = True
 ```
+
+### Running the code
+If the `GeneralDataStratification.py` and `MIDRC_Sequ_Example_5000_patient.xlsx' are in the current working directory and the appropriate packages have been installed, then this script can be run with 
+```
+python GeneralDataStratifiction.py
+'''
 
 ### Output
 The output file is saved as a .tsv file at the specified output location with the name "COMPLETED"+original filename.  This file should be identical to the input file except for an added column, "dataset", which specifies whether that case has been put in the Open/Training or Sequestered/Testing set.  
