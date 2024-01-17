@@ -4,16 +4,16 @@ This repository is meant to be a generalized version of the stratified sampling 
 
 This code is suggested for use in cases where the user would like to split data into 2 subsets in which multiple variables are equally stratified across the subsets.  Note, however, that this code is not intended to be used for scenarios in which there are many variable possibilities and few cases; e.g., 100 cases, 10 variables, 10 possibilities for each variable.  In this scenario, at least one case (and likely many) would have unique combinations of stratification variables and could be incorrectly split between the open and sequestered sets (note, our script is written to assign these cases to the open set).
 
-Here, we present 2 examples of how to split data using this [Generalized_Stratified_Sampling](https://github.com/MIDRC/Generalized_Stratified_Sampling) repository with the example data file, `MIDRC_Sequ_Example_5000_patient.xlsx` and the main data sequestration script, `GeneralDataStratification.py`.  To begin, there are several parameters/variables that must be set in `GeneralDataStratification.py`, all of which are in Lines 13-37.  Below, find brief instructions for how to set each variable.
+Here, we present 2 examples of how to split data using this [Generalized_Stratified_Sampling](https://github.com/MIDRC/Generalized_Stratified_Sampling) repository.  To begin, first acquire the example data spreadsheet [HERE](https://doi.org/10.60701/P67C-YW55).  This DOI link should open a description of the dataset at [data.midrc.org](data.midrc.org); if you scroll to the bottom of the description window, you can acquire the example data by clicking "Download File" on the right side of the screen.  Once you've downloaded the spreadsheet, there are several parameters/variables that must be set in the main script file, `GeneralDataStratification.py`, all of which are in Lines 13-37.  Below, find brief instructions for how to set each variable.
 ### Path Information
 ```
 filepath = os.getcwd()+'/' #path to file location.  This could be absolute or relative pathsor acquired with os.getcwd()+'/' 
-filename = 'MIDRC_Sequ_Example_5000_patient.xlsx'  #File name in either .csv or .xlsx format
+filename = 'MIDRC_Stratified_Sampling_Example_5000_Patient_Subset.xlsx'  #File name in either .csv or .xlsx format
 output_filepath = "os.getcwd()+'/TestRun/'  #location to save output file
 ```
 
 ### Identify stratification variables
-When you open the MIDRC_Sequ_Example_5000_patient.xlsx file, you will notice that there are 13 columns of data.  The third column, `case_id`, serves as our unique ID for the cases in this dataset.  Thus, we now set our zero-based column variable as
+When you open the MIDRC_Stratified_Sampling_Example_5000_Patient_Subset.xlsx file, you will notice that there are 13 columns of data.  The third column, `case_id`, serves as our unique ID for the cases in this dataset.  Thus, we now set our zero-based column variable as
 ```
 uid_column_number = 2
 ```
@@ -52,7 +52,7 @@ view_stats = True
 ```
 
 ### Running the code
-If the `GeneralDataStratification.py` and `MIDRC_Sequ_Example_5000_patient.xlsx' are in the current working directory and the appropriate packages have been installed, then this script can be run with 
+If the `GeneralDataStratification.py` and `MIDRC_Stratified_Sampling_Example_5000_Patient_Subset.xlsx' are in the current working directory and the appropriate packages have been installed, then this script can be run with 
 ```
 python GeneralDataStratifiction.py
 ```
