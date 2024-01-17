@@ -16,7 +16,7 @@ cwd = os.getcwd()
 
 filepath = '' #path NOT including file name
 filename = 'MIDRC_Stratified_Sampling_Example_5000_Patient_Subset.xlsx'  #File name in either .csv or .xlsx format
-output_filepath = ""  #location to save output file
+output_filepath = ''  #location to save output file
 
 
 uid_column_number = 0   #Zero-based column number with unique identifiers
