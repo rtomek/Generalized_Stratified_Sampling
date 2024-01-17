@@ -14,15 +14,15 @@ cwd = os.getcwd()
 #Define all parameters below#
 ##########################################################
 
-filepath = '/nfs/kitbag/data1/jdfuhrman/GeneralSequestrationCode/' #path NOT including file name
-filename = 'MIDRC_Sequ_Example_5000_patient.xlsx'  #File name in either .csv or .xlsx format
-output_filepath = "/nfs/kitbag/data1/jdfuhrman/GeneralSequestrationCode/TestRun/"  #location to save output file
+filepath = '' #path NOT including file name
+filename = 'MIDRC_Stratified_Sampling_Example_5000_Patient_Subset.xlsx'  #File name in either .csv or .xlsx format
+output_filepath = ""  #location to save output file
 
 
-uid_column_number = 2   #Zero-based column number with unique identifiers
-include_cols = [0, 1, 3, 4, 5]   #Zero-based column numbers that should be utilized for the stratification
-numeric_cols = [0]  #Zero-based column numbers for columns which are numeric and/or need to be binned for splitting
-numeric_cutoffs = {0:np.arange(0,100,10)}   #Bin cutoff values for the above-defined numeric columns.  Must be formatted following instructions in next line.
+uid_column_number = 0   #Zero-based column number with unique identifiers
+include_cols = [1, 2, 3, 4, 5]   #Zero-based column numbers that should be utilized for the stratification
+numeric_cols = [1]  #Zero-based column numbers for columns which are numeric and/or need to be binned for splitting
+numeric_cutoffs = {1:np.arange(0,100,10)}   #Bin cutoff values for the above-defined numeric columns.  Must be formatted following instructions in next line.
 
 #The dict elements for numeric bin cutoffs must be formatted as <numeric_column_1>:<numpy array of bin cutoffs>.  So for example, a possible format given two numeric 
 #variables in columns 0 and 4 could be: numeric_cutoffs = {0:np.arange(0, 100, 20), 4:[0, 3, 8, 10, 16]}
