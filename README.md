@@ -13,29 +13,29 @@ output_filepath = "os.getcwd()+'/TestRun/'  #location to save output file
 ```
 
 ### Identify stratification variables
-When you open the MIDRC_Stratified_Sampling_Example_5000_Patient_Subset.xlsx file, you will notice that there are 13 columns of data.  The third column, `case_id`, serves as our unique ID for the cases in this dataset.  Thus, we now set our zero-based column variable as
+When you open the MIDRC_Stratified_Sampling_Example_5000_Patient_Subset.xlsx file, you will notice that there are 13 columns of data.  The first column, `submitter_id`, serves as our unique ID for the cases in this dataset.  Thus, we now set our zero-based column variable as
 ```
-uid_column_number = 2
+uid_column_number = 0
 ```
 
-Next, we identify the columns for which we would like to have equal prevalence in the open and sequestered sets; in this example, we will use the columns for Age (column 0), COVID-19 status (1), Ethnicity (3), Race (5), and Sex (6).  We identify those columns with 
+Next, we identify the columns for which we would like to have equal prevalence in the open and sequestered sets; in this example, we will use the columns for Age (column 1), COVID-19 status (2), Ethnicity (3), Race (4), and Sex (5).  We identify those columns with 
 ```
-include_cols = [0, 1, 3, 4, 5]
+include_cols = [1, 2, 3, 4, 5]
 ```
 
 There are kinds of variables which can be used for stratification, 1) categorical and 2) numeric/continuous.  This code splits data by evaluating all combinations of included variables; however, in considering numeric/continuous variables, we would achieve an infinite (or at least, very large) number of possibilities.  To avoid this, we require that you batch/bin these variables to categories with reasonable size.  To be clear, a variable with 5 options labeled (1, 2, 3, 4, 5) should be considered categorical, not numeric.  
 
 As an example, consider Age as a numeric variable and that we want to bin age by 10-year categories.  We first identify the columns which have numeric variables (`numeric_cols`).  The bins can be set a few different ways, two of which are shown below.
 ```
-numeric_cols = [0]
-numeric_cutoffs = {0:np.arange(0, 100, 10)}
-numeric_cutoffs = {0:[0, 10, 20, 30, 40, 50, 60, 70, 80, 90]}
+numeric_cols = [1]
+numeric_cutoffs = {1:np.arange(0, 100, 10)}
+numeric_cutoffs = {1:[0, 10, 20, 30, 40, 50, 60, 70, 80, 90]}
 ```
 
 While this is not the case for our example data, suppose that we had another numeric variable in column 15 ranging between 0 and 1; our variables would look like:
 ```
-numeric_cols = [0, 15]
-numeric_cutoffs = {0:np.arange(0, 100, 10), 15:np.arange(0, 1.0, 0.1)}
+numeric_cols = [1, 15]
+numeric_cutoffs = {1:np.arange(0, 100, 10), 15:np.arange(0, 1.0, 0.1)}
 ```
 
 Or suppose that we had no numeric data, we can address this with 
