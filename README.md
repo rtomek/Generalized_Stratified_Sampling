@@ -6,7 +6,7 @@ This code is suggested for use in cases where the user would like to split data 
 
 Here, we present 2 examples of how to split data using this [Generalized_Stratified_Sampling](https://github.com/MIDRC/Generalized_Stratified_Sampling) repository.  To begin, first acquire the example data spreadsheet [HERE](https://doi.org/10.60701/P67C-YW55) (you will need to be signed into a [data.midrc.org](data.midrc.org) account to access the example data).  This DOI link should open a description of the dataset at [data.midrc.org](data.midrc.org); if you scroll to the bottom of the description window, you can acquire the example data by clicking "Download File" on the right side of the screen.  Once you've downloaded the spreadsheet, there are several parameters/variables that must be set in the main script file, `GeneralDataStratification.py`, all of which are in Lines 13-37.  Below, find brief instructions for how to set each variable.
 ### Environment Creation
-First, create a conda environment with and install packages with 
+First, create a conda environment and install packages with 
 ```
 conda create --name GenStratSamp python=3.8
 conda activate GenStratSamp
