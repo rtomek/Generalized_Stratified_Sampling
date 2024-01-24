@@ -1,13 +1,7 @@
-import sys
-
-import os
 import pandas as pd
 import numpy as np
 import math
-import datetime as date
-import random
 import copy
-cwd = os.getcwd()
 
 
 ##########################################################
@@ -36,6 +30,10 @@ view_stats = True #True if you want a printout of the number and percentage of p
 
 ###########################################################
 
+if uid_column_number in include_cols:
+    sys.exit('Column containing unique ID can not be listed in variable include_cols')
+elif len(numeric_cols) != len(numeric_cutoffs):
+    sys.exit('numeric_cutoffs must have a listed range for each column number listed in numeric_cols')
 
 def groupcounts(df, col_name):
     df_out = df[col_name].value_counts().reset_index(name='GroupCount')
@@ -45,8 +43,12 @@ def groupcounts(df, col_name):
     df_out = df_out.rename(columns={'index': col_name}).reset_index(drop=True)
     return df_out
 
-
-numeric_cols = [i-1 if i>uid_column_number else i for i in numeric_cols] #correct numeric column numbers after removing uid column
+#Correct numeric column numbers after removing uid column
+temp = numeric_cutoffs
+numeric_cutoffs = {}
+for i in numeric_cols:
+    numeric_cutoffs[i-1 if i>uid_column_number else i] = temp[i]
+numeric_cols = [i-1 if i>uid_column_number else i for i in numeric_cols]
 
 #Load data and format column information
 inputfile = filepath + filename
