@@ -84,12 +84,15 @@ def stratified_sampling(data_in: pd.DataFrame, sampling_data: SamplingData, view
     Returns:
     - pandas.DataFrame: The sampled DataFrame.
     """
+    numeric_cols = sampling_data.numeric_cols
+    """ 
+    # I don't think this is necessary anymore
     if len(sampling_data.numeric_cols) == 0:
         numeric_cols = {'age_at_index':
-                            {'bins': [0, 18, 50, 65, 1000],
-                             'labels': ['0-17', "18-49", '50-64', '65+']}}
-    else:
-        numeric_cols = sampling_data.numeric_cols
+                            {'bins': None,
+                             'labels': None}}
+    """
+
     uid_col = sampling_data.uid_col
     cols = sampling_data.features
 
@@ -251,7 +254,7 @@ if __name__ == '__main__':
                     '.xlsx': pd.read_excel,
                     '.xls': pd.read_excel,
                     '.csv': pd.read_csv,
-                    '.tsv': lambda file: pd.read_csv(file, sep='\t')
+                    '.tsv': lambda file: pd.read_csv(file, sep='\t'),
                 }
 
                 # Get the file extension
