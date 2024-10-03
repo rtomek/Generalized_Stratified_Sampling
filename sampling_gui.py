@@ -9,16 +9,8 @@ import sys
 
 from stratified_sampling import stratified_sampling
 from data_preprocessing import midrc_clean
+from CONFIG import SamplingData
 
-class SamplingData:
-    def __init__(self, filename, dataset_column, features, title, datasets, numeric_cols, uid_col):
-        self.filename = filename
-        self.dataset_column = dataset_column
-        self.features = features
-        self.title = title
-        self.datasets = datasets
-        self.numeric_cols = numeric_cols
-        self.uid_col = uid_col
 
 class SamplingApp(QWidget):
     def __init__(self):
@@ -45,29 +37,35 @@ class SamplingApp(QWidget):
         form_layout.addRow(QLabel("Dataset Column:"), self.dataset_column_input)
 
         self.features_input = QLineEdit('sex,age_at_index,race,ethnicity,covid19_positive')
-        self.features_input.setToolTip("The features (columns) to use for the calculation. The features should be comma-separated.")
+        self.features_input.setToolTip(
+            "The features (columns) to use for the calculation. The features should be comma-separated.")
         form_layout.addRow(QLabel("Features (comma-separated):"), self.features_input)
 
-        # self.title_input = QLineEdit()
-        # form_layout.addRow(QLabel("Title:"), self.title_input)
+        self.datasets_input = QLineEdit(
+            "{\"Fold 1\": 20, \"Fold 2\": 20, \"Fold 3\": 20, \"Fold 4\": 20, \"Fold 5\": 20}")
+        self.datasets_input.setToolTip(
+            "The datasets to use for the calculation. The keys are the dataset names and the values are the fractions of the data to use for each dataset.")
+        form_layout.addRow(QLabel("Datasets (JSON format, e.g., {\"Train\": 0.8, \"Validation\": 0.2}):"),
+                           self.datasets_input)
 
-        self.datasets_input = QLineEdit("{\"Fold 1\": 20, \"Fold 2\": 20, \"Fold 3\": 20, \"Fold 4\": 20, \"Fold 5\": 20}")
-        self.datasets_input.setToolTip("The datasets to use for the calculation. The keys are the dataset names and the values are the fractions of the data to use for each dataset.")
-        form_layout.addRow(QLabel("Datasets (JSON format, e.g., {\"Train\": 0.8, \"Validation\": 0.2}):"), self.datasets_input)
-
-        self.numeric_cols_input = QLineEdit("{\"age_at_index\": {\"bins\": [0, 10, 20, 30, 40, 50, 60, 70, 80, 89, 100], \"labels\": None}}")
-        self.numeric_cols_input.setToolTip("The numeric columns to use for the calculation. The keys are the column names and the values are dictionaries containing the bins and labels for the column.")
-        form_layout.addRow(QLabel("Numeric Columns (JSON format, e.g., {\"age_at_index\": {\"bins\": [0, 10, 20, 30, 40, 50, 60, 70, 80, 89, 100], \"labels\": None}, \"col2\": {\"bins\": None, \"labels\": None}}):"), self.numeric_cols_input)
+        self.numeric_cols_input = QLineEdit(
+            "{\"age_at_index\": {\"bins\": [0, 10, 20, 30, 40, 50, 60, 70, 80, 89, 100], \"labels\": None}}")
+        self.numeric_cols_input.setToolTip(
+            "The numeric columns to use for the calculation. The keys are the column names and the values are dictionaries containing the bins and labels for the column.")
+        form_layout.addRow(QLabel(
+            "Numeric Columns (JSON format, e.g., {\"age_at_index\": {\"bins\": [0, 10, 20, 30, 40, 50, 60, 70, 80, 89, 100], \"labels\": None}, \"col2\": {\"bins\": None, \"labels\": None}}):"),
+                           self.numeric_cols_input)
 
         self.uid_col_input = QLineEdit("submitter_id")
-        self.uid_col_input.setToolTip("The name of the column in the data file that contains the unique identifier for each row.")
+        self.uid_col_input.setToolTip(
+            "The name of the column in the data file that contains the unique identifier for each row.")
         form_layout.addRow(QLabel("Unique Identifier Column:"), self.uid_col_input)
 
         self.layout.addLayout(form_layout)
 
-        self.load_button = QPushButton("Load File and Perform Sampling")
-        self.load_button.setToolTip("Load the data file from the disk and perform the sampling.")
-        self.load_button.clicked.connect(self.load_file_and_sample)
+        self.load_button = QPushButton("Perform Sampling")
+        self.load_button.setToolTip("Perform the sampling based on the loaded data.")
+        self.load_button.clicked.connect(self.perform_sampling)
         self.layout.addWidget(self.load_button)
 
         self.table_view = QTableView()
@@ -80,6 +78,7 @@ class SamplingApp(QWidget):
 
         self.setLayout(self.layout)
 
+        self.df = None
         self.sampled_df = None
 
     def browse_file(self):
@@ -89,8 +88,31 @@ class SamplingApp(QWidget):
                                                                           "Excel Files (*.xlsx *.xls)")
         if file_path:
             self.filename_input.setText(file_path)
+            self.load_data(file_path)
 
-    def load_file_and_sample(self):
+    def load_data(self, file_path):
+        try:
+            # Map file extensions to corresponding pandas read functions
+            read_functions = {
+                '.xlsx': pd.read_excel,
+                '.xls': pd.read_excel,
+                '.csv': pd.read_csv,
+                '.tsv': lambda file: pd.read_csv(file, sep='\t')
+            }
+
+            # Get the file extension
+            file_ext = file_path[file_path.rfind('.'):]
+
+            # Check if the extension is supported and read the file
+            if file_ext in read_functions:
+                self.df = read_functions[file_ext](file_path)
+                self.display_dataframe(self.df)
+            else:
+                QMessageBox.critical(self, "Invalid File", "Please select a valid TSV, CSV, or Excel file.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"An error occurred while loading the file: {str(e)}")
+
+    def perform_sampling(self):
         try:
             # Create a "Please wait..." dialog
             wait_dialog = QProgressDialog("Please wait...", None, 0, 0, self)
@@ -100,11 +122,15 @@ class SamplingApp(QWidget):
             wait_dialog.show()
             QApplication.processEvents()
 
+            if self.df is None:
+                QMessageBox.warning(self, "No Data", "No data has been loaded. Please load a file first.")
+                wait_dialog.close()
+                return
+
             # Get user input to create SamplingData instance
             filename = self.filename_input.text()
             dataset_column = self.dataset_column_input.text()
             features = tuple(self.features_input.text().split(',')) if self.features_input.text() else ()
-            # title = self.title_input.text()
             title = ''
             datasets = eval(self.datasets_input.text()) if self.datasets_input.text() else {}
             numeric_cols = eval(self.numeric_cols_input.text()) if self.numeric_cols_input.text() else {}
@@ -120,35 +146,11 @@ class SamplingApp(QWidget):
                 uid_col=uid_col
             )
 
-            # Load the CSV or Excel file
-            file_path = filename
-            if not file_path:
-                return
-
-            # Map file extensions to corresponding pandas read functions
-            read_functions = {
-                '.xlsx': pd.read_excel,
-                '.xls': pd.read_excel,
-                '.csv': pd.read_csv,
-                '.tsv': lambda file: pd.read_csv(file, sep='\t')
-            }
-
-            # Get the file extension
-            file_ext = filename[filename.rfind('.'):]
-
-            # Check if the extension is supported and read the file
-            if file_ext in read_functions:
-                df = read_functions[file_ext](filename)
-            else:
-                QMessageBox.critical(self, "Invalid File", "Please select a valid TSV, CSV or Excel file.")
-                return
-
-            df = midrc_clean(df, sampling_data)
-
-
+            # Clean the data
+            df_cleaned = midrc_clean(self.df, sampling_data)
 
             # Run the stratified sampling function
-            self.sampled_df = stratified_sampling(df, sampling_data)
+            self.sampled_df = stratified_sampling(df_cleaned, sampling_data)
 
             # Close the "Please wait..." dialog
             wait_dialog.close()
@@ -177,8 +179,8 @@ class SamplingApp(QWidget):
     def save_output(self):
         if self.sampled_df is not None:
             file_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "TSV Files (*.tsv);;"
-                                                                           "CSV Files (*.csv);;"
-                                                                           "Excel Files (*.xlsx *.xls)")
+                                                                              "CSV Files (*.csv);;"
+                                                                              "Excel Files (*.xlsx *.xls)")
             # Map file extensions to corresponding pandas write functions
             write_functions = {
                 '.xlsx': lambda file: self.sampled_df.to_excel(file, index=False),
