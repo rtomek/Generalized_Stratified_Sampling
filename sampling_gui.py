@@ -159,9 +159,12 @@ class SamplingApp(QWidget):
 
     def save_output(self):
         if self.sampled_df is not None:
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "CSV Files (*.csv)")
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "TSV Files (*.tsv);;CSV Files (*.csv)")
             if file_path:
-                self.sampled_df.to_csv(file_path, index=False)
+                if file_path.endswith('.tsv'):
+                    self.sampled_df.to_csv(file_path, index=False, sep='\t')
+                elif file_path.endswith('.csv'):
+                    self.sampled_df.to_csv(file_path, index=False)
                 QMessageBox.information(self, "File Saved", "File has been saved successfully.")
         else:
             QMessageBox.warning(self, "No Data", "There is no data to save.")
