@@ -36,6 +36,7 @@ def load_file(file_path):
 
 # Function to perform sampling
 def perform_sampling(dataset_column, features, datasets, numeric_cols, uid_col):
+    print("performing sampling")
     global uploaded_data, sampled_data
 
     if uploaded_data is None:
@@ -86,7 +87,7 @@ with ui.column().classes('items-center w-full'):
         file_path = os.path.join('./uploads', file.name)
         os.makedirs('./uploads', exist_ok=True)
         with open(file_path, 'wb') as f:
-            f.write(file.content.read())
+            f.write(file.content.read())  # Corrected to use file.content.read()
         load_file(file_path)
 
 
@@ -104,14 +105,20 @@ with ui.column().classes('items-center w-full'):
             ui.notify('Please upload a file first', color='negative')
             return
 
+        selected_columns = []
+
         with ui.dialog() as dialog, ui.card():
             ui.label('Select Features')
-            selected_columns = []
             for column in columns:
-                checkbox = ui.checkbox(column, on_change=lambda e, col=column: selected_columns.append(
+                ui.checkbox(column, on_change=lambda e, col=column: selected_columns.append(
                     col) if e.value else selected_columns.remove(col))
-            ui.button('Confirm',
-                      on_click=lambda: [features_input.set_value(','.join(selected_columns)), dialog.close()])
+
+            def confirm_selection():
+                features_input.set_value(','.join(selected_columns))
+                dialog.close()
+
+            ui.button('Confirm', on_click=confirm_selection)
+        dialog.open()  # Explicitly open the dialog
 
 
     ui.button('Select Columns', on_click=show_features_selector).classes('mb-4')
@@ -142,20 +149,23 @@ with ui.column().classes('items-center w-full'):
             ui.notify('Please upload a file first', color='negative')
             return
 
+        selected_numeric_cols = {}
+
         with ui.dialog() as dialog, ui.card():
             ui.label('Select Numeric Columns and Set Bins')
-            selected_numeric_cols = {}
-
             for column in columns:
                 with ui.row():
                     checkbox = ui.checkbox(column, on_change=lambda e, col=column: selected_numeric_cols.update(
                         {col: {'bins': [], 'labels': None}}) if e.value else selected_numeric_cols.pop(col, None))
                     min_input = ui.number('Min', on_change=lambda e, col=column: selected_numeric_cols[col].update(
-                        {'min': e.value}) if col in selected_numeric_cols else None).props('outlined')
+                        {'min': e.value}) if col in selected_numeric_cols else None).props(
+                        'outlined').bind_visibility_from(checkbox, 'value')
                     max_input = ui.number('Max', on_change=lambda e, col=column: selected_numeric_cols[col].update(
-                        {'max': e.value}) if col in selected_numeric_cols else None).props('outlined')
+                        {'max': e.value}) if col in selected_numeric_cols else None).props(
+                        'outlined').bind_visibility_from(checkbox, 'value')
                     step_input = ui.number('Step', on_change=lambda e, col=column: selected_numeric_cols[col].update(
-                        {'step': e.value}) if col in selected_numeric_cols else None).props('outlined')
+                        {'step': e.value}) if col in selected_numeric_cols else None).props(
+                        'outlined').bind_visibility_from(checkbox, 'value')
 
             def confirm_numeric_columns():
                 bins_dict = {}
@@ -168,6 +178,7 @@ with ui.column().classes('items-center w-full'):
                 dialog.close()
 
             ui.button('Confirm', on_click=confirm_numeric_columns)
+        dialog.open()  # Explicitly open the dialog
 
 
     ui.button('Select Numeric Columns', on_click=show_numeric_selector).classes('mb-4')
