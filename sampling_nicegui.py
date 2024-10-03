@@ -36,12 +36,13 @@ def load_file(file_path):
 
 # Function to perform sampling
 def perform_sampling(dataset_column, features, datasets, numeric_cols, uid_col):
-    print("performing sampling")
     global uploaded_data, sampled_data
 
     if uploaded_data is None:
         ui.notify('Please upload a file first', color='negative')
         return
+
+    print("perform_sampling")
 
     try:
         # Parse features, datasets, and numeric columns from input
@@ -71,18 +72,21 @@ def perform_sampling(dataset_column, features, datasets, numeric_cols, uid_col):
         sampled_data = stratified_sampling(df_cleaned, sampling_data)
 
         # Show the sampled DataFrame in a new table view
-        ui.table(rows=sampled_data.to_dict(orient='records'), columns=list(sampled_data.columns))
+        ui.table.from_pandas(sampled_data)
         ui.notify('Sampling completed successfully', color='positive')
     except Exception as e:
         ui.notify(f'Error during sampling: {str(e)}', color='negative')
+    print("perform_sampling end")
 
 
 # UI Setup
 with ui.column().classes('items-center w-full'):
-    ui.label('Sampling Data Application').classes('text-3xl mb-4')
-
+    ui.label('MIDRC Stratified Sampling Application').classes('text-3xl mb-4')
 
     # File upload section
+    ui.label('Upload a CSV, TSV, or Excel file to proceed').classes('mb-2')
+
+
     def handle_upload(file):
         file_path = os.path.join('./uploads', file.name)
         os.makedirs('./uploads', exist_ok=True)
