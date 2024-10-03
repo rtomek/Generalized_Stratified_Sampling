@@ -5,6 +5,7 @@ import json
 from stratified_sampling import stratified_sampling
 from data_preprocessing import midrc_clean
 from CONFIG import SamplingData
+import asyncio
 
 # Variables to store data
 uploaded_data = None
@@ -34,15 +35,19 @@ def load_file(file_path):
         ui.notify(f'Error loading file: {str(e)}', color='negative')
 
 
-# Function to perform sampling
-def perform_sampling(dataset_column, features, datasets, numeric_cols, uid_col):
+# Asynchronous function to perform sampling
+async def perform_sampling(dataset_column, features, datasets, numeric_cols, uid_col):
     global uploaded_data, sampled_data
 
     if uploaded_data is None:
         ui.notify('Please upload a file first', color='negative')
         return
 
-    print("perform_sampling")
+    # Show a "Processing..." dialog while sampling is performed
+    with ui.dialog() as processing_dialog, ui.card():
+        ui.label('Processing... Please wait.')
+    processing_dialog.open()
+    await asyncio.sleep(0)  # Yield control to allow the dialog to render
 
     try:
         # Parse features, datasets, and numeric columns from input
@@ -65,18 +70,23 @@ def perform_sampling(dataset_column, features, datasets, numeric_cols, uid_col):
             uid_col=uid_col
         )
 
-        # Clean the data
-        df_cleaned = midrc_clean(uploaded_data, sampling_data)
+        loop = asyncio.get_event_loop()
 
-        # Run the stratified sampling function
-        sampled_data = stratified_sampling(df_cleaned, sampling_data)
+        # Clean the data (awaiting to allow UI to respond)
+        df_cleaned = await loop.run_in_executor(None, midrc_clean, uploaded_data, sampling_data)
+
+        # Run the stratified sampling function (awaiting to allow UI to respond)
+        sampled_data = await loop.run_in_executor(None, stratified_sampling, df_cleaned, sampling_data)
+
+        # Close the "Processing..." dialog
+        processing_dialog.close()
 
         # Show the sampled DataFrame in a new table view
-        ui.table.from_pandas(sampled_data)
+        ui.table.from_pandas(sampled_data).classes('w-full')
         ui.notify('Sampling completed successfully', color='positive')
     except Exception as e:
+        processing_dialog.close()
         ui.notify(f'Error during sampling: {str(e)}', color='negative')
-    print("perform_sampling end")
 
 
 # UI Setup
@@ -191,9 +201,12 @@ with ui.column().classes('items-center w-full'):
     uid_col_input = ui.input('Unique Identifier Column', value='submitter_id').props('outlined').classes('mb-4')
 
     # Perform Sampling Button
-    ui.button('Perform Sampling',
-              on_click=lambda: perform_sampling(dataset_column_input.value, features_input.value, datasets_input.value,
-                                                numeric_cols_input.value, uid_col_input.value)).classes('mb-4')
+    ui.button('Perform Sampling', on_click=lambda: perform_sampling(
+        dataset_column_input.value,
+        features_input.value,
+        datasets_input.value,
+        numeric_cols_input.value,
+        uid_col_input.value)).classes('mb-4')
 
 
     # Download Button
