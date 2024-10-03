@@ -50,7 +50,7 @@ class SamplingApp(QWidget):
         # form_layout.addRow(QLabel("Title:"), self.title_input)
 
         self.datasets_input = QLineEdit("{\"Open\": 0.8, \"Seq\": 0.2}")
-        form_layout.addRow(QLabel("Datasets (JSON format, e.g., {\"set1\": 0.8, \"set2\": 0.2}):"), self.datasets_input)
+        form_layout.addRow(QLabel("Datasets (JSON format, e.g., {\"Fold 1\": 20, \"Fold 2\": 20, \"Fold 3\": 20, \"Fold 4\": 20, \"Fold 5\": 20}):"), self.datasets_input)
 
         self.numeric_cols_input = QLineEdit("{\"age_at_index\": {\"bins\": [0, 10, 20, 30, 40, 50, 60, 70, 80, 89, 100], \"labels\": None}}")
         form_layout.addRow(QLabel("Numeric Columns (JSON format, e.g., {\"age_at_index\": {\"bins\": [0, 10, 20, 30, 40, 50, 60, 70, 80, 89, 100], \"labels\": None}, \"col2\": {\"bins\": None, \"labels\": None}}):"), self.numeric_cols_input)
