@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QProgressDialog,
-    QFileDialog, QTableView, QMessageBox, QFormLayout, QHBoxLayout
+    QFileDialog, QTableView, QMessageBox, QFormLayout, QHBoxLayout, QDialog, QCheckBox, QDialogButtonBox,
+    QVBoxLayout, QSpinBox, QDoubleSpinBox, QButtonGroup
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QColor
@@ -13,10 +14,112 @@ from data_preprocessing import midrc_clean
 from CONFIG import SamplingData
 
 
+class NumericColumnSelectorDialog(QDialog):
+    def __init__(self, columns, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Select Numeric Columns and Binning Parameters")
+        self.layout = QVBoxLayout()
+
+        # Add a checkbox and min/max/step input for each column
+        self.column_settings = {}
+        for column in columns:
+            checkbox = QCheckBox(column)
+            min_input = QDoubleSpinBox()
+            min_input.setPrefix("Min: ")
+            min_input.setMaximum(1e6)
+            min_input.setValue(0)
+            min_input.setVisible(False)  # Hidden by default
+
+            max_input = QDoubleSpinBox()
+            max_input.setPrefix("Max: ")
+            max_input.setMaximum(1e6)
+            max_input.setValue(100)
+            max_input.setVisible(False)  # Hidden by default
+
+            step_input = QDoubleSpinBox()
+            step_input.setPrefix("Step: ")
+            step_input.setMaximum(1e6)
+            step_input.setValue(10)
+            step_input.setVisible(False)  # Hidden by default
+
+            # Connect the checkbox to show/hide the min, max, and step inputs
+            checkbox.toggled.connect(lambda checked, min_in=min_input, max_in=max_input, step_in=step_input: self.toggle_inputs(checked, min_in, max_in, step_in))
+
+            self.column_settings[column] = {
+                'checkbox': checkbox,
+                'min_input': min_input,
+                'max_input': max_input,
+                'step_input': step_input
+            }
+
+            row_layout = QHBoxLayout()
+            row_layout.addWidget(checkbox)
+            row_layout.addWidget(min_input)
+            row_layout.addWidget(max_input)
+            row_layout.addWidget(step_input)
+            self.layout.addLayout(row_layout)
+
+        # Add OK and Cancel buttons
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self.layout.addWidget(self.button_box)
+
+        self.setLayout(self.layout)
+
+    def toggle_inputs(self, checked, min_input, max_input, step_input):
+        """Toggle the visibility of the min, max, and step inputs based on the checkbox state."""
+        min_input.setVisible(checked)
+        max_input.setVisible(checked)
+        step_input.setVisible(checked)
+
+    def get_selected_columns_with_bins(self):
+        """Return a dictionary of selected columns with their bin settings."""
+        selected_columns = {}
+        for column, settings in self.column_settings.items():
+            if settings['checkbox'].isChecked():
+                min_value = settings['min_input'].value()
+                max_value = settings['max_input'].value()
+                step_value = settings['step_input'].value()
+                if min_value < max_value and step_value > 0:
+                    bins = list(range(int(min_value), int(max_value) + 1, int(step_value)))
+                    selected_columns[column] = {'bins': bins}
+        return selected_columns
+
+
+class ColumnSelectorDialog(QDialog):
+    def __init__(self, columns, parent=None, exclusive=False):
+        super().__init__(parent)
+        self.setWindowTitle("Select Features")
+        self.layout = QVBoxLayout()
+
+        button_group = QButtonGroup(self)
+        button_group.setExclusive(exclusive)
+        # Add a checkbox for each column
+        self.checkboxes = {}
+        for column in columns:
+            checkbox = QCheckBox(column)
+            self.checkboxes[column] = checkbox
+            self.layout.addWidget(checkbox)
+            button_group.addButton(checkbox)
+
+        # Add OK and Cancel buttons
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self.layout.addWidget(self.button_box)
+
+        self.setLayout(self.layout)
+
+    def get_selected_columns(self):
+        """Return a list of selected columns."""
+        return [col for col, checkbox in self.checkboxes.items() if checkbox.isChecked()]
+
+
 class SamplingApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Sampling Data Application")
+        self.setWindowTitle("MIDRC Stratified Sampling")
         self.setGeometry(100, 100, 1200, 800)
 
         # Initialize UI components
@@ -33,34 +136,55 @@ class SamplingApp(QWidget):
         filename_layout.addWidget(self.browse_button)
         form_layout.addRow(QLabel("Filename:"), filename_layout)
 
+        # Features input with button to open column selector dialog
+        features_layout = QHBoxLayout()
+        self.features_input = QLineEdit()
+        self.select_columns_button = QPushButton("Select Columns")
+        self.select_columns_button.clicked.connect(lambda: self.show_column_selector(self.features_input))
+        features_layout.addWidget(self.features_input)
+        features_layout.addWidget(self.select_columns_button)
+        form_layout.addRow(QLabel("Features (comma-separated):"), features_layout)
+
         self.dataset_column_input = QLineEdit('dataset')
         self.dataset_column_input.setToolTip("The name of the column in the data file that contains the dataset names.")
         form_layout.addRow(QLabel("Dataset Column:"), self.dataset_column_input)
 
-        self.features_input = QLineEdit('sex,age_at_index,race,ethnicity,covid19_positive')
-        self.features_input.setToolTip(
-            "The features (columns) to use for the calculation. The features should be comma-separated.")
-        form_layout.addRow(QLabel("Features (comma-separated):"), self.features_input)
-
+        # Datasets input with buttons to quickly set values
+        datasets_layout = QHBoxLayout()
         self.datasets_input = QLineEdit(
             "{\"Fold 1\": 20, \"Fold 2\": 20, \"Fold 3\": 20, \"Fold 4\": 20, \"Fold 5\": 20}")
         self.datasets_input.setToolTip(
             "The datasets to use for the calculation. The keys are the dataset names and the values are the fractions of the data to use for each dataset.")
+        self.set_folds_button = QPushButton("Set Folds")
+        self.set_folds_button.clicked.connect(self.set_folds)
+        self.set_train_val_button = QPushButton("Set Train/Validation")
+        self.set_train_val_button.clicked.connect(self.set_train_validation)
+        datasets_layout.addWidget(self.datasets_input)
+        datasets_layout.addWidget(self.set_folds_button)
+        datasets_layout.addWidget(self.set_train_val_button)
         form_layout.addRow(QLabel("Datasets (JSON format, e.g., {\"Train\": 0.8, \"Validation\": 0.2}):"),
-                           self.datasets_input)
+                           datasets_layout)
 
-        self.numeric_cols_input = QLineEdit(
-            "{\"age_at_index\": {\"bins\": [0, 10, 20, 30, 40, 50, 60, 70, 80, 89, 100], \"labels\": None}}")
-        self.numeric_cols_input.setToolTip(
-            "The numeric columns to use for the calculation. The keys are the column names and the values are dictionaries containing the bins and labels for the column.")
-        form_layout.addRow(QLabel(
-            "Numeric Columns (JSON format, e.g., {\"age_at_index\": {\"bins\": [0, 10, 20, 30, 40, 50, 60, 70, 80, 89, 100], \"labels\": None}, \"col2\": {\"bins\": None, \"labels\": None}}):"),
-            self.numeric_cols_input)
+        # Numeric columns input with button to open numeric column selector dialog
+        numeric_cols_layout = QHBoxLayout()
+        self.numeric_cols_input = QLineEdit()
+        self.select_numeric_columns_button = QPushButton("Select Numeric Columns")
+        self.select_numeric_columns_button.clicked.connect(self.show_numeric_column_selector)
+        numeric_cols_layout.addWidget(self.numeric_cols_input)
+        numeric_cols_layout.addWidget(self.select_numeric_columns_button)
+        form_layout.addRow(QLabel("Numeric Columns (JSON format):"), numeric_cols_layout)
 
+        # Features input with button to open column selector dialog
+        uid_col_layout = QHBoxLayout()
+        self.uid_col_input = QLineEdit("")
+        self.select_uid_column_button = QPushButton("Select Columns")
+        self.select_uid_column_button.clicked.connect(lambda: self.show_column_selector(self.uid_col_input, exclusive=True))
+        uid_col_layout.addWidget(self.uid_col_input)
+        uid_col_layout.addWidget(self.select_uid_column_button)
+        form_layout.addRow(QLabel("Unique Identifier Column:"), uid_col_layout)
         self.uid_col_input = QLineEdit("submitter_id")
         self.uid_col_input.setToolTip(
             "The name of the column in the data file that contains the unique identifier for each row.")
-        form_layout.addRow(QLabel("Unique Identifier Column:"), self.uid_col_input)
 
         self.layout.addLayout(form_layout)
 
@@ -81,6 +205,7 @@ class SamplingApp(QWidget):
 
         self.df = None
         self.sampled_df = None
+        self.columns = []  # Will hold the columns of the loaded file
 
     def browse_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Supported Files (*.csv *.tsv *.xlsx *.xls);;"
@@ -107,11 +232,36 @@ class SamplingApp(QWidget):
             # Check if the extension is supported and read the file
             if file_ext in read_functions:
                 self.df = read_functions[file_ext](file_path)
+                self.columns = list(self.df.columns)  # Store the columns for column selector
                 self.display_dataframe(self.df)
             else:
                 QMessageBox.critical(self, "Invalid File", "Please select a valid TSV, CSV, or Excel file.")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred while loading the file: {str(e)}")
+
+    def show_column_selector(self, text_edit_widget, *, exclusive=False):
+        if self.columns:
+            dialog = ColumnSelectorDialog(self.columns, self, exclusive=exclusive)
+            if dialog.exec():
+                selected_columns = dialog.get_selected_columns()
+                text_edit_widget.setText(','.join(selected_columns))
+        else:
+            QMessageBox.warning(self, "No Data", "Please load a file first to select columns.")
+
+    def show_numeric_column_selector(self):
+        if self.columns:
+            dialog = NumericColumnSelectorDialog(self.columns, self)
+            if dialog.exec():
+                selected_columns_with_bins = dialog.get_selected_columns_with_bins()
+                self.numeric_cols_input.setText(str(selected_columns_with_bins))
+        else:
+            QMessageBox.warning(self, "No Data", "Please load a file first to select columns.")
+
+    def set_folds(self):
+        self.datasets_input.setText("{\"Fold 1\": 20, \"Fold 2\": 20, \"Fold 3\": 20, \"Fold 4\": 20, \"Fold 5\": 20}")
+
+    def set_train_validation(self):
+        self.datasets_input.setText("{\"Train\": 0.8, \"Validation\": 0.2}")
 
     def perform_sampling(self):
         try:
@@ -135,6 +285,11 @@ class SamplingApp(QWidget):
             title = ''
             datasets = eval(self.datasets_input.text()) if self.datasets_input.text() else {}
             numeric_cols = eval(self.numeric_cols_input.text()) if self.numeric_cols_input.text() else {}
+
+            # Ensure labels are set to None
+            for col in numeric_cols:
+                numeric_cols[col]['labels'] = None
+
             uid_col = self.uid_col_input.text()
 
             sampling_data = SamplingData(
