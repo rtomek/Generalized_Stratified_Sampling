@@ -1,11 +1,12 @@
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QProgressDialog,
-    QFileDialog, QTableView, QMessageBox, QFormLayout, QComboBox, QHBoxLayout
+    QFileDialog, QTableView, QMessageBox, QFormLayout, QHBoxLayout
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QStandardItemModel, QStandardItem
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QColor
 import pandas as pd
 import sys
+import colorsys
 
 from stratified_sampling import stratified_sampling
 from data_preprocessing import midrc_clean
@@ -54,7 +55,7 @@ class SamplingApp(QWidget):
             "The numeric columns to use for the calculation. The keys are the column names and the values are dictionaries containing the bins and labels for the column.")
         form_layout.addRow(QLabel(
             "Numeric Columns (JSON format, e.g., {\"age_at_index\": {\"bins\": [0, 10, 20, 30, 40, 50, 60, 70, 80, 89, 100], \"labels\": None}, \"col2\": {\"bins\": None, \"labels\": None}}):"),
-                           self.numeric_cols_input)
+            self.numeric_cols_input)
 
         self.uid_col_input = QLineEdit("submitter_id")
         self.uid_col_input.setToolTip(
@@ -155,9 +156,9 @@ class SamplingApp(QWidget):
             # Close the "Please wait..." dialog
             wait_dialog.close()
 
-            # Display the sampled DataFrame in the table view
+            # Display the sampled DataFrame in the table view with rows highlighted
             if self.sampled_df is not None:
-                self.display_dataframe(self.sampled_df)
+                self.display_dataframe(self.sampled_df, dataset_column)
             else:
                 QMessageBox.warning(self, "Sampling Error", "No data to display after sampling.")
 
@@ -165,13 +166,38 @@ class SamplingApp(QWidget):
             wait_dialog.close()
             QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
 
-    def display_dataframe(self, df):
+    def generate_color_map(self, unique_values):
+        """Generate a color map for unique values using different hues."""
+        num_values = len(unique_values)
+        hues = [i / num_values for i in range(num_values)]
+        colors = [
+            QColor(*[int(c * 255) for c in colorsys.hsv_to_rgb(hue, 0.5, 0.9)]) for hue in hues
+        ]
+        return dict(zip(unique_values, colors))
+
+    def display_dataframe(self, df, dataset_column=None):
         model = QStandardItemModel(df.shape[0], df.shape[1])
         model.setHorizontalHeaderLabels(df.columns)
 
+        # Generate color map for unique values in the dataset column
+        color_map = None
+        if dataset_column and dataset_column in df.columns:
+            unique_values = df[dataset_column].unique()
+            color_map = self.generate_color_map(unique_values)
+
         for row in range(df.shape[0]):
+            background_color = None
+            if color_map and dataset_column in df.columns:
+                value = df.at[row, dataset_column]
+                background_color = color_map.get(value, None)
+
             for column in range(df.shape[1]):
                 item = QStandardItem(str(df.iat[row, column]))
+
+                # Highlight the entire row with the color based on the dataset column value
+                if background_color:
+                    item.setBackground(background_color)
+
                 model.setItem(row, column, item)
 
         self.table_view.setModel(model)
