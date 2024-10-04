@@ -35,6 +35,15 @@ def load_file(file_path):
         ui.notify(f'Error loading file: {str(e)}', color='negative')
 
 
+# Handle file upload
+def handle_upload(file):
+    file_path = os.path.join('./uploads', file.name)
+    os.makedirs('./uploads', exist_ok=True)
+    with open(file_path, 'wb') as f:
+        f.write(file.content.read())  # Corrected to use file.content.read()
+    load_file(file_path)
+
+
 # Asynchronous function to perform sampling
 async def perform_sampling(dataset_column, features, datasets, numeric_cols, uid_col):
     global uploaded_data, sampled_data
@@ -81,12 +90,102 @@ async def perform_sampling(dataset_column, features, datasets, numeric_cols, uid
         # Close the "Processing..." dialog
         processing_dialog.close()
 
-        # Show the sampled DataFrame in a new table view
-        ui.table.from_pandas(sampled_data).classes('w-full')
+        # Show "Generating Table..." dialog while creating the table
+        with ui.dialog() as table_dialog, ui.card():
+            ui.label('Generating Table... Please wait.')
+        table_dialog.open()
+        await asyncio.sleep(0)  # Yield control to allow the dialog to render
+
+        # Display the sampled data with built-in pagination
+        ui.table.from_pandas(sampled_data, pagination={'rowsPerPage': 50}).classes('w-full')
+
+        # Close the "Generating Table..." dialog
+        table_dialog.close()
+
         ui.notify('Sampling completed successfully', color='positive')
     except Exception as e:
         processing_dialog.close()
         ui.notify(f'Error during sampling: {str(e)}', color='negative')
+
+
+# Function to set datasets input to default folds
+def set_folds():
+    datasets_input.set_value('{"Fold 1": 20, "Fold 2": 20, "Fold 3": 20, "Fold 4": 20, "Fold 5": 20}')
+
+
+# Function to set datasets input to train/validation split
+def set_train_validation():
+    datasets_input.set_value('{"Train": 0.8, "Validation": 0.2}')
+
+
+# Function to show the feature selector dialog
+def show_features_selector():
+    if not columns:
+        ui.notify('Please upload a file first', color='negative')
+        return
+
+    selected_columns = []
+
+    with ui.dialog() as dialog, ui.card():
+        ui.label('Select Features')
+        for column in columns:
+            ui.checkbox(column, on_change=lambda e, col=column: selected_columns.append(
+                col) if e.value else selected_columns.remove(col))
+
+        def confirm_selection():
+            features_input.set_value(','.join(selected_columns))
+            dialog.close()
+
+        ui.button('Confirm', on_click=confirm_selection)
+    dialog.open()  # Explicitly open the dialog
+
+
+# Function to show the numeric column selector dialog with binning options
+def show_numeric_selector():
+    if not columns:
+        ui.notify('Please upload a file first', color='negative')
+        return
+
+    selected_numeric_cols = {}
+
+    with ui.dialog() as dialog, ui.card():
+        ui.label('Select Numeric Columns and Set Bins')
+        for column in columns:
+            with ui.row():
+                checkbox = ui.checkbox(column, on_change=lambda e, col=column: selected_numeric_cols.update(
+                    {col: {'bins': [], 'labels': None}}) if e.value else selected_numeric_cols.pop(col, None))
+                min_input = ui.number('Min', on_change=lambda e, col=column: selected_numeric_cols[col].update(
+                    {'min': e.value}) if col in selected_numeric_cols else None).props('outlined').bind_visibility_from(
+                    checkbox, 'value')
+                max_input = ui.number('Max', on_change=lambda e, col=column: selected_numeric_cols[col].update(
+                    {'max': e.value}) if col in selected_numeric_cols else None).props('outlined').bind_visibility_from(
+                    checkbox, 'value')
+                step_input = ui.number('Step', on_change=lambda e, col=column: selected_numeric_cols[col].update(
+                    {'step': e.value}) if col in selected_numeric_cols else None).props(
+                    'outlined').bind_visibility_from(checkbox, 'value')
+
+        def confirm_numeric_columns():
+            bins_dict = {}
+            for col, settings in selected_numeric_cols.items():
+                if 'min' in settings and 'max' in settings and 'step' in settings:
+                    bins_dict[col] = {
+                        'bins': list(range(int(settings['min']), int(settings['max']) + 1, int(settings['step']))),
+                        'labels': None}
+            numeric_cols_input.set_value(json.dumps(bins_dict))
+            dialog.close()
+
+        ui.button('Confirm', on_click=confirm_numeric_columns)
+    dialog.open()  # Explicitly open the dialog
+
+
+# Function to download the sampled data as CSV
+def download_sampled_data():
+    if sampled_data is not None:
+        file_path = './uploads/sampled_data.csv'
+        sampled_data.to_csv(file_path, index=False)
+        ui.download(file_path)
+    else:
+        ui.notify('No sampled data available', color='negative')
 
 
 # UI Setup
@@ -94,111 +193,39 @@ with ui.column().classes('items-center w-full'):
     ui.label('MIDRC Stratified Sampling Application').classes('text-3xl mb-4')
 
     # File upload section
-    ui.label('Upload a CSV, TSV, or Excel file to proceed').classes('mb-2')
-
-
-    def handle_upload(file):
-        file_path = os.path.join('./uploads', file.name)
-        os.makedirs('./uploads', exist_ok=True)
-        with open(file_path, 'wb') as f:
-            f.write(file.content.read())  # Corrected to use file.content.read()
-        load_file(file_path)
-
-
-    ui.upload(on_upload=handle_upload).classes('mb-4')
+    with ui.row().classes('w-full items-center mb-4'):
+        ui.label('Upload a CSV, TSV, or Excel file to proceed').classes('mr-4')
+        ui.upload(on_upload=handle_upload)
 
     # Dataset Column Input
-    dataset_column_input = ui.input('Dataset Column', value='dataset').props('outlined').classes('mb-4')
+    with ui.row().classes('w-full items-center mb-4'):
+        ui.label('Dataset Column').classes('mr-2')
+        dataset_column_input = ui.input(value='dataset').props('outlined')
 
     # Features Input with Selection Button
-    features_input = ui.input('Features (comma-separated)').props('outlined').classes('mb-4')
-
-
-    def show_features_selector():
-        if not columns:
-            ui.notify('Please upload a file first', color='negative')
-            return
-
-        selected_columns = []
-
-        with ui.dialog() as dialog, ui.card():
-            ui.label('Select Features')
-            for column in columns:
-                ui.checkbox(column, on_change=lambda e, col=column: selected_columns.append(
-                    col) if e.value else selected_columns.remove(col))
-
-            def confirm_selection():
-                features_input.set_value(','.join(selected_columns))
-                dialog.close()
-
-            ui.button('Confirm', on_click=confirm_selection)
-        dialog.open()  # Explicitly open the dialog
-
-
-    ui.button('Select Columns', on_click=show_features_selector).classes('mb-4')
+    with ui.row().classes('w-full items-center mb-4'):
+        ui.label('Features (comma-separated)').classes('mr-2')
+        features_input = ui.input().props('outlined')
+        ui.button('Select Columns', on_click=show_features_selector)
 
     # Dataset Configuration
-    datasets_input = ui.input('Datasets (JSON format)',
-                              value='{"Fold 1": 20, "Fold 2": 20, "Fold 3": 20, "Fold 4": 20, "Fold 5": 20}').props(
-        'outlined').classes('mb-4')
-
-
-    def set_folds():
-        datasets_input.set_value('{"Fold 1": 20, "Fold 2": 20, "Fold 3": 20, "Fold 4": 20, "Fold 5": 20}')
-
-
-    def set_train_validation():
-        datasets_input.set_value('{"Train": 0.8, "Validation": 0.2}')
-
-
-    ui.button('Set Folds', on_click=set_folds).classes('mb-2')
-    ui.button('Set Train/Validation', on_click=set_train_validation).classes('mb-4')
+    with ui.row().classes('w-full items-center mb-4'):
+        ui.label('Datasets (JSON format)').classes('mr-2')
+        datasets_input = ui.input(value='{"Fold 1": 20, "Fold 2": 20, "Fold 3": 20, "Fold 4": 20, "Fold 5": 20}').props(
+            'outlined')
+        ui.button('Set Folds', on_click=set_folds).classes('ml-2')
+        ui.button('Set Train/Validation', on_click=set_train_validation).classes('ml-2')
 
     # Numeric Column Selector with Binning Parameters
-    numeric_cols_input = ui.input('Numeric Columns (JSON format)').props('outlined').classes('mb-4')
-
-
-    def show_numeric_selector():
-        if not columns:
-            ui.notify('Please upload a file first', color='negative')
-            return
-
-        selected_numeric_cols = {}
-
-        with ui.dialog() as dialog, ui.card():
-            ui.label('Select Numeric Columns and Set Bins')
-            for column in columns:
-                with ui.row():
-                    checkbox = ui.checkbox(column, on_change=lambda e, col=column: selected_numeric_cols.update(
-                        {col: {'bins': [], 'labels': None}}) if e.value else selected_numeric_cols.pop(col, None))
-                    min_input = ui.number('Min', on_change=lambda e, col=column: selected_numeric_cols[col].update(
-                        {'min': e.value}) if col in selected_numeric_cols else None).props(
-                        'outlined').bind_visibility_from(checkbox, 'value')
-                    max_input = ui.number('Max', on_change=lambda e, col=column: selected_numeric_cols[col].update(
-                        {'max': e.value}) if col in selected_numeric_cols else None).props(
-                        'outlined').bind_visibility_from(checkbox, 'value')
-                    step_input = ui.number('Step', on_change=lambda e, col=column: selected_numeric_cols[col].update(
-                        {'step': e.value}) if col in selected_numeric_cols else None).props(
-                        'outlined').bind_visibility_from(checkbox, 'value')
-
-            def confirm_numeric_columns():
-                bins_dict = {}
-                for col, settings in selected_numeric_cols.items():
-                    if 'min' in settings and 'max' in settings and 'step' in settings:
-                        bins_dict[col] = {
-                            'bins': list(range(int(settings['min']), int(settings['max']) + 1, int(settings['step']))),
-                            'labels': None}
-                numeric_cols_input.set_value(json.dumps(bins_dict))
-                dialog.close()
-
-            ui.button('Confirm', on_click=confirm_numeric_columns)
-        dialog.open()  # Explicitly open the dialog
-
-
-    ui.button('Select Numeric Columns', on_click=show_numeric_selector).classes('mb-4')
+    with ui.row().classes('w-full items-center mb-4'):
+        ui.label('Numeric Columns (JSON format)').classes('mr-2')
+        numeric_cols_input = ui.input().props('outlined')
+        ui.button('Select Numeric Columns', on_click=show_numeric_selector)
 
     # UID Column Input
-    uid_col_input = ui.input('Unique Identifier Column', value='submitter_id').props('outlined').classes('mb-4')
+    with ui.row().classes('w-full items-center mb-4'):
+        ui.label('Unique Identifier Column').classes('mr-2')
+        uid_col_input = ui.input(value='submitter_id').props('outlined')
 
     # Perform Sampling Button
     ui.button('Perform Sampling', on_click=lambda: perform_sampling(
@@ -208,16 +235,7 @@ with ui.column().classes('items-center w-full'):
         numeric_cols_input.value,
         uid_col_input.value)).classes('mb-4')
 
-
     # Download Button
-    def download_sampled_data():
-        if sampled_data is not None:
-            sampled_data.to_csv('./uploads/sampled_data.csv', index=False)
-            ui.download('./uploads/sampled_data.csv')
-        else:
-            ui.notify('No sampled data available', color='negative')
-
-
     ui.button('Download Sampled Data', on_click=download_sampled_data).classes('mb-4')
 
 # Run the NiceGUI app
