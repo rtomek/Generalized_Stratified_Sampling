@@ -190,42 +190,42 @@ def download_sampled_data():
 
 # UI Setup
 with ui.column().classes('items-center w-full'):
-    ui.label('MIDRC Stratified Sampling Application').classes('text-3xl mb-4')
 
-    # File upload section
-    with ui.row().classes('w-full items-center mb-4'):
-        ui.label('Upload a CSV, TSV, or Excel file to proceed').classes('mr-4')
-        ui.upload(on_upload=handle_upload)
+    # Create a grid layout for the inputs with separate columns for labels and inputs/buttons
+    with ui.grid(columns=4).classes('w-full gap-4 mb-4'):
+        ui.label('MIDRC Stratified Sampling Application').classes('text-3xl mb-4 col-span-2 text-center')
+        ui.label('').classes('col-span-2')
+        # File upload section
+        ui.label('Upload a CSV, TSV, or Excel file to proceed').classes('text-right mr-4')
+        ui.upload(on_upload=handle_upload).classes('col-span-3')
 
-    # Dataset Column Input
-    with ui.row().classes('w-full items-center mb-4'):
-        ui.label('Dataset Column').classes('mr-2')
-        dataset_column_input = ui.input(value='dataset').props('outlined')
+        # Dataset Column Input
+        ui.label('Dataset Column').classes('text-right mr-2')
+        dataset_column_input = ui.input(value='dataset').props('outlined').classes('w-full col-span-3')
 
-    # Features Input with Selection Button
-    with ui.row().classes('w-full items-center mb-4'):
-        ui.label('Features (comma-separated)').classes('mr-2')
-        features_input = ui.input().props('outlined')
-        ui.button('Select Columns', on_click=show_features_selector)
+        # Features Input with Selection Button
+        ui.label('Features (comma-separated)').classes('text-right mr-2')
+        with ui.row().classes('w-full col-span-3'):
+            features_input = ui.input().props('outlined').classes('w-full')
+            ui.button('Select Columns', on_click=show_features_selector).classes('ml-2')
 
-    # Dataset Configuration
-    with ui.row().classes('w-full items-center mb-4'):
-        ui.label('Datasets (JSON format)').classes('mr-2')
-        datasets_input = ui.input(value='{"Fold 1": 20, "Fold 2": 20, "Fold 3": 20, "Fold 4": 20, "Fold 5": 20}').props(
-            'outlined')
-        ui.button('Set Folds', on_click=set_folds).classes('ml-2')
-        ui.button('Set Train/Validation', on_click=set_train_validation).classes('ml-2')
+        # Dataset Configuration
+        ui.label('Datasets (JSON format)').classes('text-right mr-2')
+        with ui.row().classes('w-full col-span-3'):
+            datasets_input = ui.input(
+                value='{"Fold 1": 20, "Fold 2": 20, "Fold 3": 20, "Fold 4": 20, "Fold 5": 20}').props('outlined').classes('w-full')
+            ui.button('Set Folds', on_click=set_folds).classes('ml-2')
+            ui.button('Set Train/Validation', on_click=set_train_validation).classes('ml-2')
 
-    # Numeric Column Selector with Binning Parameters
-    with ui.row().classes('w-full items-center mb-4'):
-        ui.label('Numeric Columns (JSON format)').classes('mr-2')
-        numeric_cols_input = ui.input().props('outlined')
-        ui.button('Select Numeric Columns', on_click=show_numeric_selector)
+        # Numeric Column Selector with Binning Parameters
+        ui.label('Numeric Columns (JSON format)').classes('text-right mr-2')
+        with ui.row().classes('w-full col-span-3'):
+            numeric_cols_input = ui.input().props('outlined').classes('w-full')
+            ui.button('Select Numeric Columns', on_click=show_numeric_selector).classes('ml-2')
 
-    # UID Column Input
-    with ui.row().classes('w-full items-center mb-4'):
-        ui.label('Unique Identifier Column').classes('mr-2')
-        uid_col_input = ui.input(value='submitter_id').props('outlined')
+        # UID Column Input
+        ui.label('Unique Identifier Column').classes('text-right mr-2')
+        uid_col_input = ui.input(value='submitter_id').props('outlined').classes('w-full col-span-3')
 
     # Perform Sampling Button
     ui.button('Perform Sampling', on_click=lambda: perform_sampling(
@@ -238,5 +238,6 @@ with ui.column().classes('items-center w-full'):
     # Download Button
     ui.button('Download Sampled Data', on_click=download_sampled_data).classes('mb-4')
 
-# Run the NiceGUI app
-ui.run()
+
+# Run the NiceGUI app with title and favicon
+ui.run(title="MIDRC Stratified Sampling Application", favicon='images/favicon.ico')
