@@ -7,6 +7,7 @@ from data_preprocessing import midrc_clean
 from CONFIG import SamplingData
 import asyncio
 import itertools
+from typing import Dict
 
 # Variables to store data
 uploaded_data = None
@@ -132,7 +133,22 @@ async def perform_sampling(dataset_column, features, datasets, numeric_cols, uid
             color_map = dict(zip(unique_values, colors))
 
             # Create the table using NiceGUI
-            table = ui.table.from_pandas(sampled_data, pagination={'rowsPerPage': 50}).classes('w-full')
+            table = ui.table.from_pandas(sampled_data, pagination={'rowsPerPage': 10}).classes('w-full')
+
+            def toggle(column: Dict, visible: bool) -> None:
+                column['classes'] = '' if visible else 'hidden'
+                column['headerClasses'] = '' if visible else 'hidden'
+                table.update()
+
+            with ui.button(icon='menu'):
+                with ui.menu(), ui.column().classes('gap-0 p-2'):
+                    for col in table.columns:
+                        col['sortable'] = True
+                        # col['filterable'] = True  # TODO: Enable filtering
+                        if col['name'] not in [ dataset_column, uid_col ]:
+                            col['required'] = False
+                            ui.switch(col['label'], value=True, on_change=lambda e,
+                                                                                column=col: toggle(column, e.value))
 
             # Add a slot for the specific dataset column to apply conditional formatting
             color_conditions = " : ".join([f"props.row.{dataset_column} == '{value}' ? 'background-color: {color};'" for value, color in color_map.items()])
