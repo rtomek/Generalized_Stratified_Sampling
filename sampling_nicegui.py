@@ -45,10 +45,28 @@ def handle_upload(file):
     load_file(file_path)
 
 # Function to generate distinct colors for each unique value
-def generate_colors(num_colors) -> list[str]:
+def generate_colors(num_colors):
     colors = itertools.cycle([
-        "red", "blue", "green", "orange", "purple",
-        "yellow", "black", "white", "gray", "brown"
+        "#87CEFA",  # Light Sky Blue
+        "#FFA07A",  # Light Salmon
+        "#98FB98",  # Pale Green
+        "#FFB6C1",  # Light Pink
+        "#FFD700",  # Gold
+        "#CD5C5C",  # Indian Red
+        "#40E0D0",  # Turquoise
+        "#EE82EE",  # Violet
+        "#F0E68C",  # Khaki
+        "#7B68EE",  # Medium Slate Blue
+        "#00CED1",  # Dark Turquoise
+        "#FFA500",  # Orange
+        "#9ACD32",  # Yellow Green
+        "#8FBC8F",  # Dark Sea Green
+        "#FF6347",  # Tomato
+        "#4682B4",  # Steel Blue
+        "#00FA9A",  # Medium Spring Green
+        "#FF69B4",  # Hot Pink
+        "#D2691E",  # Chocolate
+        "#8A2BE2"   # Blue Violet
     ])
     return [next(colors) for _ in range(num_colors)]
 
@@ -109,6 +127,7 @@ async def perform_sampling(dataset_column, features, datasets, numeric_cols, uid
 
         # Extract the unique values from the specified dataset column
         unique_values = sampled_data[dataset_column].unique()
+        #unique_values = sampled_data['race'].unique()
         colors = generate_colors(len(unique_values))
         color_map = dict(zip(unique_values, colors))
 
@@ -116,16 +135,14 @@ async def perform_sampling(dataset_column, features, datasets, numeric_cols, uid
         table = ui.table.from_pandas(sampled_data, pagination={'rowsPerPage': 50}).classes('w-full')
 
         # Add a slot for the specific dataset column to apply conditional formatting
-        color_conditions = " : ".join([f"props.value == '{value}' ? '{color}'" for value, color in color_map.items()])
-        slot_string = f''' 
-            <q-td key="{dataset_column}" :props="props">
-                <q-badge :color="{color_conditions} : 'grey'">
+        color_conditions = " : ".join([f"props.row.{dataset_column} == '{value}' ? 'background-color: {color};'" for value, color in color_map.items()])
+        slot_string = f'''
+            <q-td :props="props" :style="{color_conditions} : 'background-color: grey;'">
                     {'{{ props.value }}'}
-                </q-badge>
             </q-td>
         '''
-        print(slot_string)
-        table.add_slot(f'body-cell-{dataset_column}', slot_string)
+        # print(slot_string)
+        table.add_slot(f'body-cell', slot_string)
 
         # Close the "Generating Table..." dialog
         table_dialog.close()
