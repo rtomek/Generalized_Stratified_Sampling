@@ -122,27 +122,27 @@ async def perform_sampling(dataset_column, features, datasets, numeric_cols, uid
         table_dialog.open()
         await asyncio.sleep(0)  # Yield control to allow the dialog to render
 
-        # Remove the old table by clearing the container
-        table_container.clear()
+        with table_container:
+            # Remove the old table by clearing the container
+            table_container.clear()
 
-        # Extract the unique values from the specified dataset column
-        unique_values = sampled_data[dataset_column].unique()
-        #unique_values = sampled_data['race'].unique()
-        colors = generate_colors(len(unique_values))
-        color_map = dict(zip(unique_values, colors))
+            # Extract the unique values from the specified dataset column
+            unique_values = list(datasets_dict.keys())
+            colors = generate_colors(len(unique_values))
+            color_map = dict(zip(unique_values, colors))
 
-        # Create the table using NiceGUI
-        table = ui.table.from_pandas(sampled_data, pagination={'rowsPerPage': 50}).classes('w-full')
+            # Create the table using NiceGUI
+            table = ui.table.from_pandas(sampled_data, pagination={'rowsPerPage': 50}).classes('w-full')
 
-        # Add a slot for the specific dataset column to apply conditional formatting
-        color_conditions = " : ".join([f"props.row.{dataset_column} == '{value}' ? 'background-color: {color};'" for value, color in color_map.items()])
-        slot_string = f'''
-            <q-td :props="props" :style="{color_conditions} : 'background-color: grey;'">
-                    {'{{ props.value }}'}
-            </q-td>
-        '''
-        # print(slot_string)
-        table.add_slot(f'body-cell', slot_string)
+            # Add a slot for the specific dataset column to apply conditional formatting
+            color_conditions = " : ".join([f"props.row.{dataset_column} == '{value}' ? 'background-color: {color};'" for value, color in color_map.items()])
+            slot_string = f'''
+                <q-td :props="props" :style="{color_conditions} : 'background-color: grey;'">
+                        {'{{ props.value }}'}
+                </q-td>
+            '''
+            # print(slot_string)
+            table.add_slot(f'body-cell', slot_string)
 
         # Close the "Generating Table..." dialog
         table_dialog.close()
