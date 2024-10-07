@@ -12,6 +12,9 @@ uploaded_data = None
 sampled_data = None
 columns = []
 
+# Set page title and favicon
+ui.page.title = "MIDRC Stratified Sampling Application"
+ui.page.favicon = 'images/favicon.ico'
 
 # Function to load file and extract columns
 def load_file(file_path):
@@ -240,4 +243,4 @@ with ui.column().classes('items-center w-full'):
 
 
 # Run the NiceGUI app with title and favicon
-ui.run(title="MIDRC Stratified Sampling Application", favicon='images/favicon.ico')
+ui.run()
