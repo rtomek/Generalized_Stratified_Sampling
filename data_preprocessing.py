@@ -124,19 +124,21 @@ def fix_midrc_age(midrc_df):
     col_name_gt89 = 'age_at_index_gt89'
 
     if col_name in midrc_df.columns:
+        max_age_recorded = 89
+        age_to_set_gt = max_age_recorded + 1
         # Check if 'age_at_index_gt89' exists and process accordingly
         if col_name_gt89 in midrc_df.columns:
             # Find rows where 'age_at_index' is NaN
             is_na = midrc_df[col_name].isna()
 
             # Set 'age_at_index' to 89 where 'age_at_index_gt89' is 'Yes'
-            midrc_df.loc[is_na & (midrc_df[col_name_gt89] == "Yes"), col_name] = 89
+            midrc_df.loc[is_na & (midrc_df[col_name_gt89] == "Yes"), col_name] = age_to_set_gt
 
             # Set 'age_at_index' to 9999 where 'age_at_index_gt89' is not 'Yes'
             midrc_df.loc[is_na & (midrc_df[col_name_gt89] != "Yes"), col_name] = 9999
 
         # Set the maximum age to 89 if it is greater than 89 but not unknown
-        midrc_df.loc[(midrc_df[col_name] > 89) & (midrc_df[col_name] < 9999), col_name] = 89
+        midrc_df.loc[(midrc_df[col_name] > max_age_recorded) & (midrc_df[col_name] < 9999), col_name] = age_to_set_gt
 
     return midrc_df
 
