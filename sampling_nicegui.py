@@ -6,15 +6,13 @@ from stratified_sampling import stratified_sampling
 from data_preprocessing import midrc_clean
 from CONFIG import SamplingData
 import asyncio
+import itertools
 
 # Variables to store data
 uploaded_data = None
 sampled_data = None
 columns = []
-
-# Set page title and favicon
-ui.page.title = "MIDRC Stratified Sampling Application"
-ui.page.favicon = 'images/favicon.ico'
+table_container = None  # Container to hold the table element
 
 # Function to load file and extract columns
 def load_file(file_path):
@@ -46,10 +44,17 @@ def handle_upload(file):
         f.write(file.content.read())  # Corrected to use file.content.read()
     load_file(file_path)
 
+# Function to generate distinct colors for each unique value
+def generate_colors(num_colors) -> list[str]:
+    colors = itertools.cycle([
+        "red", "blue", "green", "orange", "purple",
+        "yellow", "black", "white", "gray", "brown"
+    ])
+    return [next(colors) for _ in range(num_colors)]
 
 # Asynchronous function to perform sampling
 async def perform_sampling(dataset_column, features, datasets, numeric_cols, uid_col):
-    global uploaded_data, sampled_data
+    global uploaded_data, sampled_data, table_container
 
     if uploaded_data is None:
         ui.notify('Please upload a file first', color='negative')
@@ -99,8 +104,28 @@ async def perform_sampling(dataset_column, features, datasets, numeric_cols, uid
         table_dialog.open()
         await asyncio.sleep(0)  # Yield control to allow the dialog to render
 
-        # Display the sampled data with built-in pagination
-        ui.table.from_pandas(sampled_data, pagination={'rowsPerPage': 50}).classes('w-full')
+        # Remove the old table by clearing the container
+        table_container.clear()
+
+        # Extract the unique values from the specified dataset column
+        unique_values = sampled_data[dataset_column].unique()
+        colors = generate_colors(len(unique_values))
+        color_map = dict(zip(unique_values, colors))
+
+        # Create the table using NiceGUI
+        table = ui.table.from_pandas(sampled_data, pagination={'rowsPerPage': 50}).classes('w-full')
+
+        # Add a slot for the specific dataset column to apply conditional formatting
+        color_conditions = " : ".join([f"props.value == '{value}' ? '{color}'" for value, color in color_map.items()])
+        slot_string = f''' 
+            <q-td key="{dataset_column}" :props="props">
+                <q-badge :color="{color_conditions} : 'grey'">
+                    {'{{ props.value }}'}
+                </q-badge>
+            </q-td>
+        '''
+        print(slot_string)
+        table.add_slot(f'body-cell-{dataset_column}', slot_string)
 
         # Close the "Generating Table..." dialog
         table_dialog.close()
@@ -109,6 +134,7 @@ async def perform_sampling(dataset_column, features, datasets, numeric_cols, uid
     except Exception as e:
         processing_dialog.close()
         ui.notify(f'Error during sampling: {str(e)}', color='negative')
+
 
 
 # Function to set datasets input to default folds
@@ -241,6 +267,8 @@ with ui.column().classes('items-center w-full'):
     # Download Button
     ui.button('Download Sampled Data', on_click=download_sampled_data).classes('mb-4')
 
+    # Container for the table
+    table_container = ui.column().classes('w-full')
 
-# Run the NiceGUI app with title and favicon
+# Run the NiceGUI app
 ui.run()
