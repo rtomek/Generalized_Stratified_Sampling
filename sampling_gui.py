@@ -182,7 +182,6 @@ class SamplingApp(QWidget):
         uid_col_layout.addWidget(self.uid_col_input)
         uid_col_layout.addWidget(self.select_uid_column_button)
         form_layout.addRow(QLabel("Unique Identifier Column:"), uid_col_layout)
-        self.uid_col_input = QLineEdit("submitter_id")
         self.uid_col_input.setToolTip(
             "The name of the column in the data file that contains the unique identifier for each row.")
 
@@ -239,7 +238,7 @@ class SamplingApp(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred while loading the file: {str(e)}")
 
-    def show_column_selector(self, text_edit_widget, *, exclusive=False):
+    def show_column_selector(self, text_edit_widget: QLineEdit, *, exclusive=False):
         if self.columns:
             dialog = ColumnSelectorDialog(self.columns, self, exclusive=exclusive)
             if dialog.exec():
