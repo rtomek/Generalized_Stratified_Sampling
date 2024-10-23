@@ -1,0 +1,31 @@
+OPEN_VS_SEQ_SAMPLING_DATA:
+  filename: "TestRun/COMPLETED_MIDRC_Sequ_Example_5000_patient.tsv"
+  dataset_column: "dataset"
+  datasets:
+    Open: 0.8
+    Seq: 0.2
+  features: ['sex', 'age_at_index', 'race', 'ethnicity', 'covid19_positive']
+  title: "Generated from Stratified Sampling (80/20)"  # Used as title for e.g. matplotlib plots
+  uid_col: "submitter_id"
+  numeric_cols:
+    age_at_index:
+      bins: [0, 18, 50, 65, 1000]  # Using CDC age bins
+      labels: ['0-17', "18-49", '50-64', '65+']
+
+5_FOLDS_AND_TEST_SAMPLING_DATA:
+  filename: "TestRun/COMPLETED_MIDRC_Sequ_Example_5000_patient.tsv"
+  dataset_column: "dataset"
+  datasets:
+    Fold 1: 16
+    Fold 2: 16
+    Fold 3: 16
+    Fold 4: 16
+    Fold 5: 16
+    Test:   20
+  features: ['sex', 'age_at_index', 'race', 'ethnicity', 'covid19_positive']
+  title: "Generated from Stratified Sampling (80/20) with 5 training/validation folds"  # Used as title for e.g. matplotlib plots
+  uid_col: "submitter_id"
+  numeric_cols:
+    age_at_index:
+      bins: [0, 10, 20, 30, 40, 50, 60, 70, 80, 89, 100]  # Using 10-year age bins
+      labels: null  # Use default-generated labels
