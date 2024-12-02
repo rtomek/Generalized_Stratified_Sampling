@@ -13,6 +13,17 @@ conda activate GenStratSamp
 pip install -r requirements.txt
 ```
 
+### Running Generalized Stratified Sampling
+We offer multiple options for running the MIDRC Generalized Stratified Sampling Code.  The application can be run with either
+```
+python sampling_gui.py
+```
+for our graphical user interface (GUI) or
+```
+python sampling_nicegui.py
+```
+for our browser-based interface.
+
 ### Filename Information
 ```
 The filename of the data source to be loaded is specified in the config file with the `filename` key.
