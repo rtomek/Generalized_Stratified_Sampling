@@ -36,9 +36,9 @@ When you open the MIDRC_Stratified_Sampling_Example_5000_Patient_Subset.xlsx fil
 uid_col: "submitter_id"
 ```
 
-Next, we identify the columns for which we would like to have equal prevalence in the open and sequestered sets; in this example, we will use the columns for Age, COVID-19 status, Ethnicity, Race, and Sex.  We identify those columns with 
+Next, we identify the columns for which we would like to have equal prevalence in the open and sequestered sets; in this example, we will use the columns for Age, Ethnicity, Race, and Sex.  We identify those columns with 
 ```yaml
-features: ['sex', 'age_at_index', 'race', 'ethnicity', 'covid19_positive']
+features: ['sex', 'age_at_index', 'race', 'ethnicity']
 ```
 
 There are kinds of variables which can be used for stratification, 1) categorical and 2) numeric/continuous.  This code splits data by evaluating all combinations of included variables; however, in considering numeric/continuous variables, we would achieve an infinite (or at least, very large) number of possibilities.  To avoid this, we recommend that you batch/bin these variables to categories with reasonable size.  To be clear, a variable with only 5 options labeled (1, 2, 3, 4, 5) should be considered categorical, not numeric.  
