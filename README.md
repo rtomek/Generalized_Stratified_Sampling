@@ -108,3 +108,5 @@ python stratified_sampling.py
 
 ### Output
 The output file is saved as a .tsv file at the specified output location with the name "COMPLETED"+original filename.  This file should be identical to the input file except for an added column, set using dataset_column, which specifies which set that case has been put in.  
+
+*This work was supported in part by The Medical Imaging and Data Resource Center (MIDRC), which is funded by the National Institute of Biomedical Imaging and Bioengineering (NIBIB) of the National Institutes of Health under contract 75N92020D00021/5N92023F00002 and through the Advanced Research Projects Agency for Health (ARPA-H).*
