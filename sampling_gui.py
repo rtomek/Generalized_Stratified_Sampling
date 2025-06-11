@@ -23,8 +23,14 @@ class NumericColumnSelectorDialog(QDialog):
     def __init__(self, columns, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Select Numeric Columns and Binning Parameters")
-        # main layout with scrollable content
         main_layout = QVBoxLayout()
+
+        # filter input
+        self.filter_edit = QLineEdit()
+        self.filter_edit.setPlaceholderText("Filter columns...")
+        self.filter_edit.textChanged.connect(self.apply_filter)
+        main_layout.addWidget(self.filter_edit)
+
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -34,6 +40,10 @@ class NumericColumnSelectorDialog(QDialog):
         # Add a checkbox and min/max/step input for each column
         self.column_settings = {}
         for column in columns:
+            # wrap row for filtering
+            row_widget = QWidget()
+            row_layout = QHBoxLayout(row_widget)
+
             checkbox = QCheckBox(column)
             min_input = QDoubleSpinBox()
             min_input.setPrefix("Min: ")
@@ -54,21 +64,24 @@ class NumericColumnSelectorDialog(QDialog):
             step_input.setVisible(False)  # Hidden by default
 
             # Connect the checkbox to show/hide the min, max, and step inputs
-            checkbox.toggled.connect(lambda checked, min_in=min_input, max_in=max_input, step_in=step_input: self.toggle_inputs(checked, min_in, max_in, step_in))
+            checkbox.toggled.connect(
+                lambda checked, min_in=min_input, max_in=max_input, step_in=step_input:
+                self.toggle_inputs(checked, min_in, max_in, step_in)
+            )
 
             self.column_settings[column] = {
                 'checkbox': checkbox,
                 'min_input': min_input,
                 'max_input': max_input,
-                'step_input': step_input
+                'step_input': step_input,
+                'row_widget': row_widget
             }
 
-            row_layout = QHBoxLayout()
             row_layout.addWidget(checkbox)
             row_layout.addWidget(min_input)
             row_layout.addWidget(max_input)
             row_layout.addWidget(step_input)
-            content_layout.addLayout(row_layout)
+            content_layout.addWidget(row_widget)
 
         # finalize scroll area and main layout
         scroll_area.setWidget(content)
@@ -81,6 +94,12 @@ class NumericColumnSelectorDialog(QDialog):
         main_layout.addWidget(self.button_box)
 
         self.setLayout(main_layout)
+
+    def apply_filter(self, text):
+        """Show only numeric rows matching filter text."""
+        text = text.lower()
+        for col, settings in self.column_settings.items():
+            settings['row_widget'].setVisible(text in col.lower())
 
     def toggle_inputs(self, checked, min_input, max_input, step_input):
         """Toggle the visibility of the min, max, and step inputs based on the checkbox state."""
@@ -106,8 +125,13 @@ class ColumnSelectorDialog(QDialog):
     def __init__(self, columns, parent=None, exclusive=False):
         super().__init__(parent)
         self.setWindowTitle("Select Features")
-        # main vertical layout
         main_layout = QVBoxLayout()
+
+        # filter input
+        self.filter_edit = QLineEdit()
+        self.filter_edit.setPlaceholderText("Filter columns...")
+        self.filter_edit.textChanged.connect(self.apply_filter)
+        main_layout.addWidget(self.filter_edit)
 
         # optional exclusivity
         button_group = QButtonGroup(self)
@@ -137,6 +161,12 @@ class ColumnSelectorDialog(QDialog):
         main_layout.addWidget(self.button_box)
 
         self.setLayout(main_layout)
+
+    def apply_filter(self, text):
+        """Show only checkboxes matching filter text."""
+        text = text.lower()
+        for col, cb in self.checkboxes.items():
+            cb.setVisible(text in col.lower())
 
     def get_selected_columns(self):
         """Return a list of selected columns."""
