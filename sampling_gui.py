@@ -6,7 +6,7 @@
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QProgressDialog,
     QFileDialog, QTableView, QMessageBox, QFormLayout, QHBoxLayout, QDialog, QCheckBox, QDialogButtonBox,
-    QVBoxLayout, QSpinBox, QDoubleSpinBox, QButtonGroup, QGridLayout, QScrollArea, QWidget
+    QVBoxLayout, QSpinBox, QDoubleSpinBox, QButtonGroup, QGridLayout, QScrollArea, QAbstractScrollArea, QWidget
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QColor
@@ -33,7 +33,10 @@ class NumericColumnSelectorDialog(QDialog):
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
+        # make scroll area size hint follow its content
+        scroll_area.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         content = QWidget()
         content_layout = QVBoxLayout(content)
 
@@ -85,7 +88,9 @@ class NumericColumnSelectorDialog(QDialog):
 
         # finalize scroll area and main layout
         scroll_area.setWidget(content)
+        self.content_widget = content
         main_layout.addWidget(scroll_area)
+        self.scroll_area = scroll_area
 
         # Add OK and Cancel buttons
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -94,6 +99,8 @@ class NumericColumnSelectorDialog(QDialog):
         main_layout.addWidget(self.button_box)
 
         self.setLayout(main_layout)
+        # auto‐adjust dialog width/height to content
+        self.adjustSize()
 
     def apply_filter(self, text):
         """Show only numeric rows matching filter text."""
@@ -106,6 +113,9 @@ class NumericColumnSelectorDialog(QDialog):
         min_input.setVisible(checked)
         max_input.setVisible(checked)
         step_input.setVisible(checked)
+        # adjust dialog size to fit newly visible widgets
+        self.adjustSize()
+        self._update_scroll_width()
 
     def get_selected_columns_with_bins(self):
         """Return a dictionary of selected columns with their bin settings."""
@@ -120,6 +130,20 @@ class NumericColumnSelectorDialog(QDialog):
                     selected_columns[column] = {'bins': bins}
         return selected_columns
 
+    def _update_scroll_width(self):
+        """Resize scroll_area width based on content layout’s minimum width."""
+        # ensure layouts are recalculated
+        self.content_widget.updateGeometry()
+        # get content minimum width
+        content_min_w = self.content_widget.layout().minimumSize().width()
+        # width of vertical scrollbar
+        vbar_w = self.scroll_area.verticalScrollBar().sizeHint().width()
+        # account for frame
+        frame = self.scroll_area.frameWidth() * 2
+        total_w = content_min_w + vbar_w + frame
+        # apply and force geometry update
+        self.scroll_area.setFixedWidth(max(total_w, self.scroll_area.width()))
+        self.scroll_area.updateGeometry()
 
 class ColumnSelectorDialog(QDialog):
     def __init__(self, columns, parent=None, exclusive=False):
@@ -140,7 +164,8 @@ class ColumnSelectorDialog(QDialog):
         # scrollable grid container
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         content = QWidget()
         grid = QGridLayout(content)
         self.checkboxes = {}
@@ -161,6 +186,8 @@ class ColumnSelectorDialog(QDialog):
         main_layout.addWidget(self.button_box)
 
         self.setLayout(main_layout)
+        # auto‐adjust dialog width/height to content
+        self.adjustSize()
 
     def apply_filter(self, text):
         """Show only checkboxes matching filter text."""
@@ -172,6 +199,15 @@ class ColumnSelectorDialog(QDialog):
         """Return a list of selected columns."""
         return [col for col, checkbox in self.checkboxes.items() if checkbox.isChecked()]
 
+    def _update_scroll_width(self):
+        """Resize scroll_area width based on content layout’s minimum width."""
+        self.content_widget.updateGeometry()
+        content_min_w = self.content_widget.layout().minimumSize().width()
+        vbar_w = self.scroll_area.verticalScrollBar().sizeHint().width()
+        frame = self.scroll_area.frameWidth() * 2
+        total_w = content_min_w + vbar_w + frame
+        self.scroll_area.setFixedWidth(total_w)
+        self.scroll_area.updateGeometry()
 
 class SamplingApp(QWidget):
     def __init__(self):
