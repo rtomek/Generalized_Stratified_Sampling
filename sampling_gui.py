@@ -6,7 +6,7 @@
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QProgressDialog,
     QFileDialog, QTableView, QMessageBox, QFormLayout, QHBoxLayout, QDialog, QCheckBox, QDialogButtonBox,
-    QVBoxLayout, QSpinBox, QDoubleSpinBox, QButtonGroup
+    QVBoxLayout, QSpinBox, QDoubleSpinBox, QButtonGroup, QGridLayout, QScrollArea
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QColor
@@ -96,25 +96,37 @@ class ColumnSelectorDialog(QDialog):
     def __init__(self, columns, parent=None, exclusive=False):
         super().__init__(parent)
         self.setWindowTitle("Select Features")
-        self.layout = QVBoxLayout()
+        # main vertical layout
+        main_layout = QVBoxLayout()
 
+        # optional exclusivity
         button_group = QButtonGroup(self)
         button_group.setExclusive(exclusive)
-        # Add a checkbox for each column
-        self.checkboxes = {}
-        for column in columns:
-            checkbox = QCheckBox(column)
-            self.checkboxes[column] = checkbox
-            self.layout.addWidget(checkbox)
-            button_group.addButton(checkbox)
 
-        # Add OK and Cancel buttons
+        # scrollable grid container
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        content = QWidget()
+        grid = QGridLayout(content)
+        self.checkboxes = {}
+        cols_per_row = 4  # number of checkbox columns
+        for idx, column in enumerate(columns):
+            cb = QCheckBox(column)
+            self.checkboxes[column] = cb
+            button_group.addButton(cb)
+            r, c = divmod(idx, cols_per_row)
+            grid.addWidget(cb, r, c)
+        scroll_area.setWidget(content)
+        main_layout.addWidget(scroll_area)
+
+        # Add OK / Cancel
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
-        self.layout.addWidget(self.button_box)
+        main_layout.addWidget(self.button_box)
 
-        self.setLayout(self.layout)
+        self.setLayout(main_layout)
 
     def get_selected_columns(self):
         """Return a list of selected columns."""
