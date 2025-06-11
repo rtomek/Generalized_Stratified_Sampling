@@ -6,7 +6,7 @@
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QProgressDialog,
     QFileDialog, QTableView, QMessageBox, QFormLayout, QHBoxLayout, QDialog, QCheckBox, QDialogButtonBox,
-    QVBoxLayout, QSpinBox, QDoubleSpinBox, QButtonGroup, QGridLayout, QScrollArea
+    QVBoxLayout, QSpinBox, QDoubleSpinBox, QButtonGroup, QGridLayout, QScrollArea, QWidget
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QColor
@@ -23,7 +23,13 @@ class NumericColumnSelectorDialog(QDialog):
     def __init__(self, columns, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Select Numeric Columns and Binning Parameters")
-        self.layout = QVBoxLayout()
+        # main layout with scrollable content
+        main_layout = QVBoxLayout()
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
 
         # Add a checkbox and min/max/step input for each column
         self.column_settings = {}
@@ -62,15 +68,19 @@ class NumericColumnSelectorDialog(QDialog):
             row_layout.addWidget(min_input)
             row_layout.addWidget(max_input)
             row_layout.addWidget(step_input)
-            self.layout.addLayout(row_layout)
+            content_layout.addLayout(row_layout)
+
+        # finalize scroll area and main layout
+        scroll_area.setWidget(content)
+        main_layout.addWidget(scroll_area)
 
         # Add OK and Cancel buttons
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
-        self.layout.addWidget(self.button_box)
+        main_layout.addWidget(self.button_box)
 
-        self.setLayout(self.layout)
+        self.setLayout(main_layout)
 
     def toggle_inputs(self, checked, min_input, max_input, step_input):
         """Toggle the visibility of the min, max, and step inputs based on the checkbox state."""
