@@ -197,6 +197,74 @@ def stratified_sampling(data_in: pd.DataFrame, sampling_data: SamplingData, view
 
     return final_table
 
+def stratified_sampling_fast(data_in: pd.DataFrame, sampling_data, *, seed=None) -> pd.DataFrame:
+    uid_col = sampling_data.uid_col
+    cols = list(sampling_data.features)
+    out = data_in.copy()  # or copy.copy(data_in)
+
+    # Ensure target column exists
+    if sampling_data.dataset_column not in out.columns:
+        out[sampling_data.dataset_column] = ""
+
+    # Precompute split weights
+    datasets = list(sampling_data.datasets.keys())
+    datasets_arr = np.array(datasets, dtype=object)
+    weights = np.array([sampling_data.datasets[d] for d in datasets], dtype=float)
+    weights = weights / weights.sum()
+
+    # If possible, make group columns categorical to speed groupby
+    for c in cols:
+        if out[c].dtype == "object":
+            out[c] = out[c].astype("category")
+
+    # Group only on strata that exist
+    grouped = out.groupby(cols, sort=False, observed=True, dropna=False)
+
+    # Work in a numpy array for fast assignment
+    assigned = out[sampling_data.dataset_column].to_numpy(dtype=object)
+
+    rng = np.random.default_rng(seed)
+
+    for _, grp in grouped:
+        idx = grp.index.to_numpy()
+        m = idx.size
+        if m == 0:
+            continue
+
+        # Shuffle indices once
+        idx = rng.permutation(idx)
+
+        # Floor allocations
+        raw = weights * m
+        base = np.floor(raw).astype(int)
+        r = raw - base  # remainders
+
+        # Assign the base counts in one pass
+        start = 0
+        for d, k in zip(datasets, base):
+            if k:
+                assigned[idx[start:start+k]] = d
+                start += k
+
+        # Assign leftovers using remainder probabilities WITHOUT replacement
+        leftover = m - start
+        if leftover > 0:
+            if r.sum() == 0:
+                extra = rng.choice(datasets_arr, size=leftover, replace=False)
+            else:
+                # weighted without replacement
+                extra = rng.choice(datasets_arr, size=leftover, replace=False, p=r / r.sum())
+            assigned[idx[start:]] = extra
+
+    out[sampling_data.dataset_column] = assigned
+
+    # Handle unassigned (same idea as your code)
+    unassigned = (out[sampling_data.dataset_column] == "")
+    if unassigned.any():
+        out.loc[unassigned, sampling_data.dataset_column] = datasets[0]
+
+    return out
+
 def generate_output_filename(input_filename, *, extension: str = 'tsv', use_timestamp: bool = True,
                              prefix: str = 'COMPLETED_', suffix: str = '', timestamp_in_prefix: bool = False) -> str:
     """
