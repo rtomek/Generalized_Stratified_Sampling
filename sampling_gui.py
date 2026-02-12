@@ -4,9 +4,9 @@
 #through the Advanced Research Projects Agency for Health (ARPA-H).
 
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QProgressDialog,
+    QApplication, QLabel, QLineEdit, QPushButton, QProgressDialog,
     QFileDialog, QTableView, QMessageBox, QFormLayout, QHBoxLayout, QDialog, QCheckBox, QDialogButtonBox,
-    QVBoxLayout, QSpinBox, QDoubleSpinBox, QButtonGroup, QGridLayout, QScrollArea, QAbstractScrollArea, QWidget
+    QVBoxLayout, QDoubleSpinBox, QButtonGroup, QGridLayout, QScrollArea, QAbstractScrollArea, QWidget
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QColor

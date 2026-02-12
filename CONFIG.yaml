@@ -1,5 +1,5 @@
 OPEN_VS_SEQ_SAMPLING_DATA:
-  filename: "TestRun/COMPLETED_MIDRC_Sequ_Example_5000_patient.tsv"
+  filename: "TestRun/MIDRC_Sequ_Example_5000_patient.tsv"
   dataset_column: "dataset"
   datasets:
     Open: 0.8
@@ -13,7 +13,7 @@ OPEN_VS_SEQ_SAMPLING_DATA:
       labels: ['0-17', "18-49", '50-64', '65+']
 
 5_FOLDS_AND_TEST_SAMPLING_DATA:
-  filename: "TestRun/COMPLETED_MIDRC_Sequ_Example_5000_patient.tsv"
+  filename: "TestRun/MIDRC_Sequ_Example_5000_patient.tsv"
   dataset_column: "dataset"
   datasets:
     Fold 1: 16
