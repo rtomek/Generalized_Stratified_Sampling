@@ -72,62 +72,66 @@ def check_for_duplicates(df_in: pd.DataFrame, uid_col: str) -> bool:
     return dupes.any()
 
 
-def stratified_sampling(data_in: pd.DataFrame, sampling_data: SamplingData, view_stats=False) -> pd.DataFrame:
+def stratified_sampling_old(data_in: pd.DataFrame,
+                        sampling_data: SamplingData,
+                        *,
+                        view_stats=False,
+                        bin_numeric_cols=True,
+                        random_seed=None) -> pd.DataFrame:
     """
-    Perform stratified sampling on a DataFrame.
-
-    Parameters:
-    - data (pandas.DataFrame): The DataFrame to be sampled.
-    - sampling_data (SamplingData): The sampling configuration.
-    - view_stats (bool): Whether to view the statistics of the sampling.
-
-    Returns:
-    - pandas.DataFrame: The sampled DataFrame.
+    Faster stratified sampling using group indices instead of repeated boolean indexing.
     """
-    numeric_cols = sampling_data.numeric_cols
-    """ 
-    # I don't think this is necessary anymore
-    if len(sampling_data.numeric_cols) == 0:
-        numeric_cols = {'age_at_index':
-                            {'bins': None,
-                             'labels': None}}
-    """
+    if random_seed is not None:
+        np.random.seed(random_seed)
 
     uid_col = sampling_data.uid_col
-    cols = sampling_data.features
+    cols = list(sampling_data.features)
 
     data_in[uid_col] = data_in[uid_col].astype(str)
 
     # Check for duplicates - If warning presents, go to merge batch
+    # OPTIONAL - DISABLE FOR BOOTSTRAPPING
     check_for_duplicates(data_in, uid_col)
 
-    # Convert numeric columns to numeric type and non-numeric columns to string type
-    for col_name in cols:
-        if col_name in numeric_cols:
-            data_in[col_name] = pd.to_numeric(data_in[col_name], errors='coerce')
+    # Bin numeric columns (creates cut columns)
+    if bin_numeric_cols:
+        if len(sampling_data.numeric_cols) == 0:
+            numeric_cols = {'Age at Index':
+                                {'raw column': 'age_at_index',
+                                 'bins': [0, 18, 50, 65, 1000],
+                                 'labels': ['0-17', "18-49", '50-64', '65+']}}
         else:
-            data_in[col_name] = data_in[col_name].astype(str)
+            numeric_cols = sampling_data.numeric_cols
+
+        # Convert types
+        for col_name in cols:
+            if col_name in numeric_cols:
+                raw_col_name = numeric_cols[col_name].get('raw column', col_name)
+                data_in[raw_col_name] = pd.to_numeric(data_in[raw_col_name], errors='coerce')
+            else:
+                data_in[col_name] = data_in[col_name].astype(str)
+
+        # cut_suffix = "_CUT" if len(numeric_cols) > 0 else ""
+        for col_name, bin_info in numeric_cols.items():
+            data_in = bin_dataframe_column(data_in,
+                                           column_name=bin_info.get('raw column', col_name),
+                                           cut_column_name=col_name,
+                                           bins=bin_info['bins'],
+                                           labels=bin_info['labels'])
+
+        # Determine grouping column names (use cut columns for numeric cols)
+        #group_cols = [(col + cut_suffix) if col in numeric_cols else col for col in cols]
+    #else:
+        #group_cols = cols
 
     # Copy the original data to a new dataframe
     final_table = copy.copy(data_in)
-
-    # Separate numeric groups into categories based on bin cutoff values
-    cut_suffix = "_CUT" if len(numeric_cols) > 0 else ""
-    for col_name, bin_info in numeric_cols.items():
-        data_in = bin_dataframe_column(data_in,
-                                       column_name=col_name,
-                                       cut_column_name=col_name + cut_suffix,
-                                       bins=bin_info['bins'],
-                                       labels=bin_info['labels'])
-        # We can use this to check the distribution of the binned column
-        # print(data[col_name + cut_suffix].value_counts(dropna=False))
 
     ## Stratified sampling process
 
     # Gather stats using a dictionary comprehension
     stats_dict = {
-        (f"{col_name}{cut_suffix}" if col_name in numeric_cols else col_name): group_counts(data_in,
-         f"{col_name}{cut_suffix}" if col_name in numeric_cols else col_name)
+        col_name: group_counts(data_in, col_name)
         for col_name in cols
     }
 
@@ -146,8 +150,7 @@ def stratified_sampling(data_in: pd.DataFrame, sampling_data: SamplingData, view
         # Filter the data based on the current combination of variable selections
         temp_df = data_in
         for j, col_name in enumerate(cols):
-            filter_col = col_name + cut_suffix if col_name in numeric_cols else col_name
-            temp_df = temp_df.loc[temp_df[filter_col] == var_selections[j]]
+            temp_df = temp_df.loc[temp_df[col_name] == var_selections[j]]
 
         if not temp_df.empty:
             total_fraction = sum(sampling_data.datasets.values())
@@ -173,13 +176,13 @@ def stratified_sampling(data_in: pd.DataFrame, sampling_data: SamplingData, view
             while start_index < len(temp_df_shuffled):
                 total_remainder = sum([v['remainder'] for v in dataset_split_dict.values()])
                 single_choice = np.random.choice(
-                                     list(dataset_split_dict.keys()),
-                                     p=[v['remainder']/total_remainder for v in dataset_split_dict.values()]
-                                     )
-                final_table.loc[final_table[uid_col] == temp_df_shuffled.iloc[start_index][uid_col], sampling_data.dataset_column] = single_choice
+                    list(dataset_split_dict.keys()),
+                    p=[v['remainder'] / total_remainder for v in dataset_split_dict.values()]
+                )
+                final_table.loc[final_table[uid_col] == temp_df_shuffled.iloc[start_index][
+                    uid_col], sampling_data.dataset_column] = single_choice
                 dataset_split_dict.pop(single_choice)
                 start_index += 1
-
 
     # print('Sampling complete. Saving Results...')
     # print(FinalTable[sampling_data.dataset_column].value_counts(dropna=False))
@@ -197,10 +200,40 @@ def stratified_sampling(data_in: pd.DataFrame, sampling_data: SamplingData, view
 
     return final_table
 
-def stratified_sampling_fast(data_in: pd.DataFrame, sampling_data, *, seed=None) -> pd.DataFrame:
+def stratified_sampling(data_in: pd.DataFrame, sampling_data, *, bin_numeric_cols=True, random_seed=None) -> pd.DataFrame:
     uid_col = sampling_data.uid_col
     cols = list(sampling_data.features)
     out = data_in.copy()  # or copy.copy(data_in)
+
+    # Check for duplicates - If warning presents, go to merge batch
+    # OPTIONAL - DISABLE FOR BOOTSTRAPPING
+    check_for_duplicates(data_in, uid_col)
+
+    # Bin numeric columns (creates cut columns)
+    if bin_numeric_cols:
+        if len(sampling_data.numeric_cols) == 0:
+            numeric_cols = {'Age at Index':
+                                {'raw column': 'age_at_index',
+                                 'bins': [0, 18, 50, 65, 1000],
+                                 'labels': ['0-17', "18-49", '50-64', '65+']}}
+        else:
+            numeric_cols = sampling_data.numeric_cols
+
+        # Convert types
+        for col_name in cols:
+            if col_name in numeric_cols:
+                raw_col_name = numeric_cols[col_name].get('raw column', col_name)
+                data_in[raw_col_name] = pd.to_numeric(data_in[raw_col_name], errors='coerce')
+            else:
+                data_in[col_name] = data_in[col_name].astype(str)
+
+        # cut_suffix = "_CUT" if len(numeric_cols) > 0 else ""
+        for col_name, bin_info in numeric_cols.items():
+            data_in = bin_dataframe_column(data_in,
+                                           column_name=bin_info.get('raw column', col_name),
+                                           cut_column_name=col_name,
+                                           bins=bin_info['bins'],
+                                           labels=bin_info['labels'])
 
     # Ensure target column exists
     if sampling_data.dataset_column not in out.columns:
@@ -223,7 +256,7 @@ def stratified_sampling_fast(data_in: pd.DataFrame, sampling_data, *, seed=None)
     # Work in a numpy array for fast assignment
     assigned = out[sampling_data.dataset_column].to_numpy(dtype=object)
 
-    rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(random_seed)
 
     for _, grp in grouped:
         idx = grp.index.to_numpy()
