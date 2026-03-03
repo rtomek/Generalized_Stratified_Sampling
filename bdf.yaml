@@ -1,0 +1,70 @@
+version: 0.0.1
+
+tool:
+  name: Generalized Stratified Sampling
+  repo_url: https://github.com/MIDRC/Generalized_Stratified_Sampling
+  tool_homepage: https://github.com/MIDRC/Generalized_Stratified_Sampling
+  documentation_url: https://github.com/MIDRC/Generalized_Stratified_Sampling/blob/main/README.md
+  tool_type: Script
+
+llm:
+  usesLlm: false
+  bringOwnKey: false
+
+input:
+  - name: imaging tabular 1
+    dataCategory: imaging
+    dataClass: tabular
+    dataType: clinical-ehr
+    format:
+      - csv
+    dataStandard:
+      - dicom
+    proprietary: false
+    source: https://data.midrc.org/
+
+output:
+  - name: imaginng tabular 1
+    dataCategory: imaging
+    dataClass: tabular
+    dataType: radiology
+    format:
+      - csv
+    dataStandard:
+      - dicom
+    proprietary: false
+    source: https://data.midrc.org/
+
+license:
+  license_type: Not licensed
+  link: N/A
+
+funding:
+  source: Developed for MIDRC creation with NIBIB, and then generalized and converted to tool via ARPA-H BDF
+  agreement: Not specified
+  link: ""
+
+domains:
+  - Imaging and other AI input domains
+
+credit:
+  - name: MIDRC
+    role: Developer
+    org: Medical Imaging and Data Resource Center
+    url: https://www.midrc.org/
+
+target_users:
+  primary_user:
+    user_type: researcher
+    technical_literacy_level:
+      - intermediate
+    biomedical_literacy_level:
+      - intermediate
+
+maturity:
+  beginning_maturity: 1
+  current_maturity: 8
+
+media: [{ "link": "https://www.youtube.com/watch?v=PFa6EUqE-G8" }]
+
+collaborations: []
